@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,11 +26,13 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
+#include "renderer/simplex.h"	// line font definition
+#include "renderer/VertexCache.h"
+#include "renderer/Cinematic.h"
+#include "renderer/RenderWorld_local.h"
 
-#include "tr_local.h"
-#include "simplex.h"	// line font definition
+#include "renderer/tr_local.h"
 
 #define MAX_DEBUG_LINES			16384
 
@@ -132,7 +134,7 @@ void RB_SimpleSurfaceSetup( const drawSurf_t *drawSurf ) {
 	// change the scissor if needed
 	if ( r_useScissor.GetBool() && !backEnd.currentScissor.Equals( drawSurf->scissorRect ) ) {
 		backEnd.currentScissor = drawSurf->scissorRect;
-		qglScissor( backEnd.viewDef->viewport.x1 + backEnd.currentScissor.x1, 
+		qglScissor( backEnd.viewDef->viewport.x1 + backEnd.currentScissor.x1,
 			backEnd.viewDef->viewport.y1 + backEnd.currentScissor.y1,
 			backEnd.currentScissor.x2 + 1 - backEnd.currentScissor.x1,
 			backEnd.currentScissor.y2 + 1 - backEnd.currentScissor.y1 );
@@ -149,7 +151,7 @@ void RB_SimpleWorldSetup( void ) {
 	qglLoadMatrixf( backEnd.viewDef->worldSpace.modelViewMatrix );
 
 	backEnd.currentScissor = backEnd.viewDef->scissor;
-	qglScissor( backEnd.viewDef->viewport.x1 + backEnd.currentScissor.x1, 
+	qglScissor( backEnd.viewDef->viewport.x1 + backEnd.currentScissor.x1,
 		backEnd.viewDef->viewport.y1 + backEnd.currentScissor.y1,
 		backEnd.currentScissor.x2 + 1 - backEnd.currentScissor.x1,
 		backEnd.currentScissor.y2 + 1 - backEnd.currentScissor.y1 );
@@ -413,8 +415,8 @@ void RB_ShowIntensity( void ) {
 	qglMatrixMode( GL_PROJECTION );
 	GL_State( GLS_DEPTHFUNC_ALWAYS );
 	qglPushMatrix();
-	qglLoadIdentity(); 
-    qglOrtho( 0, 1, 0, 1, -1, 1 );
+	qglLoadIdentity();
+	qglOrtho( 0, 1, 0, 1, -1, 1 );
 	qglRasterPos2f( 0, 0 );
 	qglPopMatrix();
 	qglColor3f( 1, 1, 1 );
@@ -445,8 +447,8 @@ void RB_ShowDepthBuffer( void ) {
 	qglLoadIdentity();
 	qglMatrixMode( GL_PROJECTION );
 	qglPushMatrix();
-	qglLoadIdentity(); 
-    qglOrtho( 0, 1, 0, 1, -1, 1 );
+	qglLoadIdentity();
+	qglOrtho( 0, 1, 0, 1, -1, 1 );
 	qglRasterPos2f( 0, 0 );
 	qglPopMatrix();
 	qglMatrixMode( GL_MODELVIEW );
@@ -463,8 +465,8 @@ void RB_ShowDepthBuffer( void ) {
 
 #if 0
 	for ( i = 0 ; i < glConfig.vidWidth * glConfig.vidHeight ; i++ ) {
-		((byte *)depthReadback)[i*4] = 
-		((byte *)depthReadback)[i*4+1] = 
+		((byte *)depthReadback)[i*4] =
+		((byte *)depthReadback)[i*4+1] =
 		((byte *)depthReadback)[i*4+2] = 255 * ((float *)depthReadback)[i];
 		((byte *)depthReadback)[i*4+3] = 1;
 	}
@@ -566,7 +568,7 @@ void RB_ShowSilhouette( void ) {
 	GL_Cull( CT_TWO_SIDED );
 	qglDisable( GL_DEPTH_TEST );
 
-	RB_RenderDrawSurfListWithFunction( backEnd.viewDef->drawSurfs, backEnd.viewDef->numDrawSurfs, 
+	RB_RenderDrawSurfListWithFunction( backEnd.viewDef->drawSurfs, backEnd.viewDef->numDrawSurfs,
 		RB_T_RenderTriangleSurface );
 
 
@@ -653,7 +655,7 @@ static void RB_ShowShadowCount( void ) {
 
 	for ( vLight = backEnd.viewDef->viewLights ; vLight ; vLight = vLight->next ) {
 		for ( i = 0 ; i < 2 ; i++ ) {
-			for ( surf = i ? vLight->localShadows : vLight->globalShadows 
+			for ( surf = i ? vLight->localShadows : vLight->globalShadows
 				; surf ; surf = (drawSurf_t *)surf->nextOnLight ) {
 				RB_SimpleSurfaceSetup( surf );
 				const srfTriangles_t	*tri = surf->geo;
@@ -733,7 +735,6 @@ Debugging tool
 =====================
 */
 static void RB_ShowTris( drawSurf_t **drawSurfs, int numDrawSurfs ) {
-	modelTrace_t mt;
 	idVec3 end;
 
 	if ( !r_showTris.GetInteger() ) {
@@ -787,7 +788,7 @@ Debugging tool
 static void RB_ShowSurfaceInfo( drawSurf_t **drawSurfs, int numDrawSurfs ) {
 	modelTrace_t mt;
 	idVec3 start, end;
-	
+
 	if ( !r_showSurfaceInfo.GetBool() ) {
 		return;
 	}
@@ -811,7 +812,6 @@ static void RB_ShowSurfaceInfo( drawSurf_t **drawSurfs, int numDrawSurfs ) {
 	qglPolygonOffset( -1, -2 );
 	qglEnable( GL_POLYGON_OFFSET_LINE );
 
-	idVec3	trans[3];
 	float	matrix[16];
 
 	// transform the object verts into global space
@@ -819,7 +819,7 @@ static void RB_ShowSurfaceInfo( drawSurf_t **drawSurfs, int numDrawSurfs ) {
 
 	tr.primaryWorld->DrawText( mt.entity->hModel->Name(), mt.point + tr.primaryView->renderView.viewaxis[2] * 12,
 		0.35f, colorRed, tr.primaryView->renderView.viewaxis );
-	tr.primaryWorld->DrawText( mt.material->GetName(), mt.point, 
+	tr.primaryWorld->DrawText( mt.material->GetName(), mt.point,
 		0.35f, colorBlue, tr.primaryView->renderView.viewaxis );
 
 	qglEnable( GL_DEPTH_TEST );
@@ -1060,13 +1060,13 @@ static void RB_ShowTangentSpace( drawSurf_t **drawSurfs, int numDrawSurfs ) {
 			v = &tri->verts[tri->indexes[j]];
 
 			if ( r_showTangentSpace.GetInteger() == 1 ) {
-				qglColor4f( 0.5 + 0.5 * v->tangents[0][0],  0.5 + 0.5 * v->tangents[0][1],  
+				qglColor4f( 0.5 + 0.5 * v->tangents[0][0],  0.5 + 0.5 * v->tangents[0][1],
 					0.5 + 0.5 * v->tangents[0][2], 0.5 );
 			} else if ( r_showTangentSpace.GetInteger() == 2 ) {
-				qglColor4f( 0.5 + 0.5 * v->tangents[1][0],  0.5 + 0.5 * v->tangents[1][1],  
+				qglColor4f( 0.5 + 0.5 * v->tangents[1][0],  0.5 + 0.5 * v->tangents[1][1],
 					0.5 + 0.5 * v->tangents[1][2], 0.5 );
 			} else {
-				qglColor4f( 0.5 + 0.5 * v->normal[0],  0.5 + 0.5 * v->normal[1],  
+				qglColor4f( 0.5 + 0.5 * v->normal[0],  0.5 + 0.5 * v->normal[1],
 					0.5 + 0.5 * v->normal[2], 0.5 );
 			}
 			qglVertex3fv( v->xyz.ToFloatPtr() );
@@ -1199,7 +1199,7 @@ static void RB_ShowNormals( drawSurf_t **drawSurfs, int numDrawSurfs ) {
 			if ( !tri->verts ) {
 				continue;
 			}
-			
+
 			for ( j = 0 ; j < tri->numVerts ; j++ ) {
 				R_LocalPointToGlobal( drawSurf->space->modelMatrix, tri->verts[j].xyz + tri->verts[j].tangents[0] + tri->verts[j].normal * 0.2f, pos );
 				RB_DrawText( va( "%d", j ), pos, 0.01f, colorWhite, backEnd.viewDef->renderView.viewaxis, 1 );
@@ -1223,6 +1223,7 @@ RB_ShowNormals
 Debugging tool
 =====================
 */
+#if 0
 static void RB_AltShowNormals( drawSurf_t **drawSurfs, int numDrawSurfs ) {
 	int			i, j, k;
 	drawSurf_t	*drawSurf;
@@ -1290,6 +1291,7 @@ static void RB_AltShowNormals( drawSurf_t **drawSurfs, int numDrawSurfs ) {
 	qglEnable( GL_DEPTH_TEST );
 	qglEnable( GL_STENCIL_TEST );
 }
+#endif
 
 
 
@@ -1365,7 +1367,7 @@ static void RB_ShowTextureVectors( drawSurf_t **drawSurfs, int numDrawSurfs ) {
 			temp[2] = (d0[2] * d1[4] - d0[4] * d1[2]) * inva;
 			temp.Normalize();
 			tangents[0] = temp;
-        
+
 			temp[0] = (d0[3] * d1[0] - d0[0] * d1[3]) * inva;
 			temp[1] = (d0[3] * d1[1] - d0[1] * d1[3]) * inva;
 			temp[2] = (d0[3] * d1[2] - d0[2] * d1[3]) * inva;
@@ -1733,18 +1735,18 @@ float RB_DrawTextLength( const char *text, float scale, int len ) {
 			spacing = simplex[charIndex][1];
 			index = 2;
 
-			while( index - 2 < num ) {   
-				if ( simplex[charIndex][index] < 0) {  
+			while( index - 2 < num ) {
+				if ( simplex[charIndex][index] < 0) {
 					index++;
-					continue; 
-				} 
+					continue;
+				}
 				index += 2;
-				if ( simplex[charIndex][index] < 0) {  
+				if ( simplex[charIndex][index] < 0) {
 					index++;
-					continue; 
-				} 
-			}   
-			textLen += spacing * scale;  
+					continue;
+				}
+			}
+			textLen += spacing * scale;
 		}
 	}
 	return textLen;
@@ -1760,7 +1762,7 @@ RB_DrawText
 */
 static void RB_DrawText( const char *text, const idVec3 &origin, float scale, const idVec4 &color, const idMat3 &viewAxis, const int align ) {
 	int i, j, len, num, index, charIndex, line;
-	float textLen, spacing;
+	float textLen = 0.0f, spacing;
 	idVec3 org, p1, p2;
 
 	if ( text && *text ) {
@@ -1773,6 +1775,7 @@ static void RB_DrawText( const char *text, const idVec3 &origin, float scale, co
 			line = 0;
 		}
 
+		org.Zero();
 		len = strlen( text );
 		for ( i = 0; i < len; i++ ) {
 
@@ -1805,9 +1808,9 @@ static void RB_DrawText( const char *text, const idVec3 &origin, float scale, co
 			index = 2;
 
 			while( index - 2 < num ) {
-				if ( simplex[charIndex][index] < 0) {  
+				if ( simplex[charIndex][index] < 0) {
 					index++;
-					continue; 
+					continue;
 				}
 				p1 = org + scale * simplex[charIndex][index] * -viewAxis[1] + scale * simplex[charIndex][index+1] * viewAxis[2];
 				index += 2;
@@ -2193,9 +2196,9 @@ void RB_TestGamma( void ) {
 	GL_State( GLS_DEPTHFUNC_ALWAYS );
 	qglColor3f( 1, 1, 1 );
 	qglPushMatrix();
-	qglLoadIdentity(); 
+	qglLoadIdentity();
 	qglDisable( GL_TEXTURE_2D );
-    qglOrtho( 0, 1, 0, 1, -1, 1 );
+	qglOrtho( 0, 1, 0, 1, -1, 1 );
 	qglRasterPos2f( 0.01f, 0.01f );
 	qglDrawPixels( G_WIDTH, G_HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, image );
 	qglPopMatrix();
@@ -2243,9 +2246,9 @@ static void RB_TestGammaBias( void ) {
 	GL_State( GLS_DEPTHFUNC_ALWAYS );
 	qglColor3f( 1, 1, 1 );
 	qglPushMatrix();
-	qglLoadIdentity(); 
+	qglLoadIdentity();
 	qglDisable( GL_TEXTURE_2D );
-    qglOrtho( 0, 1, 0, 1, -1, 1 );
+	qglOrtho( 0, 1, 0, 1, -1, 1 );
 	qglRasterPos2f( 0.01f, 0.01f );
 	qglDrawPixels( G_WIDTH, G_HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, image );
 	qglPopMatrix();
@@ -2297,12 +2300,12 @@ void RB_TestImage( void ) {
 	GL_State( GLS_DEPTHFUNC_ALWAYS | GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA );
 	qglColor3f( 1, 1, 1 );
 	qglPushMatrix();
-	qglLoadIdentity(); 
-    qglOrtho( 0, 1, 0, 1, -1, 1 );
+	qglLoadIdentity();
+	qglOrtho( 0, 1, 0, 1, -1, 1 );
 
 	tr.testImage->Bind();
 	qglBegin( GL_QUADS );
-	
+
 	qglTexCoord2f( 0, 1 );
 	qglVertex2f( 0.5 - w, 0 );
 
@@ -2336,7 +2339,7 @@ void RB_RenderDebugTools( drawSurf_t **drawSurfs, int numDrawSurfs ) {
 
 	GL_State( GLS_DEFAULT );
 	backEnd.currentScissor = backEnd.viewDef->scissor;
-	qglScissor( backEnd.viewDef->viewport.x1 + backEnd.currentScissor.x1, 
+	qglScissor( backEnd.viewDef->viewport.x1 + backEnd.currentScissor.x1,
 		backEnd.viewDef->viewport.y1 + backEnd.currentScissor.y1,
 		backEnd.currentScissor.x2 + 1 - backEnd.currentScissor.x1,
 		backEnd.currentScissor.y2 + 1 - backEnd.currentScissor.y1 );

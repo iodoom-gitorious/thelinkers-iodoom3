@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -25,20 +25,19 @@ If you have questions concerning this license or the applicable additional terms
 
 ===========================================================================
 */
+
+#include "sys/platform.h"
+#include "gamesys/SysCvar.h"
+#include "script/Script_Thread.h"
+
+#include "Class.h"
+
 /*
 
 Base class for all C++ objects.  Provides fast run-time type checking and run-time
 instancing of objects.
 
 */
-
-#include "../../idlib/precompiled.h"
-#pragma hdrstop
-
-#include "../Game_local.h"
-
-#include "TypeInfo.h"
-
 
 /***********************************************************************
 
@@ -62,7 +61,7 @@ initialized in any order, the constructor must handle the case that subclasses
 are initialized before superclasses.
 ================
 */
-idTypeInfo::idTypeInfo( const char *classname, const char *superclass, idEventFunc<idClass> *eventCallbacks, idClass *( *CreateInstance )( void ), 
+idTypeInfo::idTypeInfo( const char *classname, const char *superclass, idEventFunc<idClass> *eventCallbacks, idClass *( *CreateInstance )( void ),
 	void ( idClass::*Spawn )( void ), void ( idClass::*Save )( idSaveGame *savefile ) const, void ( idClass::*Restore )( idRestoreGame *savefile ) ) {
 
 	idTypeInfo *type;
@@ -83,7 +82,7 @@ idTypeInfo::idTypeInfo( const char *classname, const char *superclass, idEventFu
 
 	// Check if any subclasses were initialized before their superclass
 	for( type = typelist; type != NULL; type = type->next ) {
-		if ( ( type->super == NULL ) && !idStr::Cmp( type->superclass, this->classname ) && 
+		if ( ( type->super == NULL ) && !idStr::Cmp( type->superclass, this->classname ) &&
 			idStr::Cmp( type->classname, "idClass" ) ) {
 			type->super	= this;
 		}
@@ -117,7 +116,7 @@ idTypeInfo::~idTypeInfo() {
 ================
 idTypeInfo::Init
 
-Initializes the event callback table for the class.  Creates a 
+Initializes the event callback table for the class.  Creates a
 table for fast lookups of event functions.  Should only be called once.
 ================
 */
@@ -203,7 +202,7 @@ void idTypeInfo::Init( void ) {
 idTypeInfo::Shutdown
 
 Should only be called when DLL or EXE is being shutdown.
-Although it cleans up any allocated memory, it doesn't bother to remove itself 
+Although it cleans up any allocated memory, it doesn't bother to remove itself
 from the class list since the program is shutting down.
 ================
 */
@@ -394,7 +393,7 @@ void idClass::Init( void ) {
 	// is a subclass of another
 	num = 0;
 	for( c = classHierarchy.GetNext(); c != NULL; c = c->node.GetNext(), num++ ) {
-        c->typeNum = num;
+		c->typeNum = num;
 		c->lastChild += num;
 	}
 
@@ -504,7 +503,7 @@ void idClass::operator delete( void *ptr ) {
 		p = ( ( int * )ptr ) - 1;
 		memused -= *p;
 		numobjects--;
-        Mem_Free( p );
+		Mem_Free( p );
 	}
 }
 
@@ -515,7 +514,7 @@ void idClass::operator delete( void *ptr, int, int, char *, int ) {
 		p = ( ( int * )ptr ) - 1;
 		memused -= *p;
 		numobjects--;
-        Mem_Free( p );
+		Mem_Free( p );
 	}
 }
 
@@ -629,9 +628,9 @@ bool idClass::PostEventArgs( const idEventDef *ev, int time, int numargs, ... ) 
 	idTypeInfo	*c;
 	idEvent		*event;
 	va_list		args;
-	
+
 	assert( ev );
-	
+
 	if ( !idEvent::initialized ) {
 		return false;
 	}
@@ -828,9 +827,9 @@ idClass::ProcessEventArgs
 bool idClass::ProcessEventArgs( const idEventDef *ev, int numargs, ... ) {
 	idTypeInfo	*c;
 	int			num;
-	int			data[ D_EVENT_MAXARGS ];
+	intptr_t	data[ D_EVENT_MAXARGS ];
 	va_list		args;
-	
+
 	assert( ev );
 	assert( idEvent::initialized );
 
@@ -936,7 +935,7 @@ bool idClass::ProcessEvent( const idEventDef *ev, idEventArg arg1, idEventArg ar
 idClass::ProcessEventArgPtr
 ================
 */
-bool idClass::ProcessEventArgPtr( const idEventDef *ev, int *data ) {
+bool idClass::ProcessEventArgPtr( const idEventDef *ev, intptr_t *data ) {
 	idTypeInfo	*c;
 	int			num;
 	eventCallback_t	callback;
@@ -999,42 +998,42 @@ http://developer.apple.com/documentation/DeveloperTools/Conceptual/MachORuntime/
 		break;
 
 	case 1 :
-		typedef void ( idClass::*eventCallback_1_t )( const int );
+		typedef void ( idClass::*eventCallback_1_t )( const intptr_t );
 		( this->*( eventCallback_1_t )callback )( data[ 0 ] );
 		break;
 
 	case 2 :
-		typedef void ( idClass::*eventCallback_2_t )( const int, const int );
+		typedef void ( idClass::*eventCallback_2_t )( const intptr_t, const intptr_t );
 		( this->*( eventCallback_2_t )callback )( data[ 0 ], data[ 1 ] );
 		break;
 
 	case 3 :
-		typedef void ( idClass::*eventCallback_3_t )( const int, const int, const int );
+		typedef void ( idClass::*eventCallback_3_t )( const intptr_t, const intptr_t, const intptr_t );
 		( this->*( eventCallback_3_t )callback )( data[ 0 ], data[ 1 ], data[ 2 ] );
 		break;
 
 	case 4 :
-		typedef void ( idClass::*eventCallback_4_t )( const int, const int, const int, const int );
+		typedef void ( idClass::*eventCallback_4_t )( const intptr_t, const intptr_t, const intptr_t, const intptr_t );
 		( this->*( eventCallback_4_t )callback )( data[ 0 ], data[ 1 ], data[ 2 ], data[ 3 ] );
 		break;
 
 	case 5 :
-		typedef void ( idClass::*eventCallback_5_t )( const int, const int, const int, const int, const int );
+		typedef void ( idClass::*eventCallback_5_t )( const intptr_t, const intptr_t, const intptr_t, const intptr_t, const intptr_t );
 		( this->*( eventCallback_5_t )callback )( data[ 0 ], data[ 1 ], data[ 2 ], data[ 3 ], data[ 4 ] );
 		break;
 
 	case 6 :
-		typedef void ( idClass::*eventCallback_6_t )( const int, const int, const int, const int, const int, const int );
+		typedef void ( idClass::*eventCallback_6_t )( const intptr_t, const intptr_t, const intptr_t, const intptr_t, const intptr_t, const intptr_t );
 		( this->*( eventCallback_6_t )callback )( data[ 0 ], data[ 1 ], data[ 2 ], data[ 3 ], data[ 4 ], data[ 5 ] );
 		break;
 
 	case 7 :
-		typedef void ( idClass::*eventCallback_7_t )( const int, const int, const int, const int, const int, const int, const int );
+		typedef void ( idClass::*eventCallback_7_t )( const intptr_t, const intptr_t, const intptr_t, const intptr_t, const intptr_t, const intptr_t, const intptr_t );
 		( this->*( eventCallback_7_t )callback )( data[ 0 ], data[ 1 ], data[ 2 ], data[ 3 ], data[ 4 ], data[ 5 ], data[ 6 ] );
 		break;
 
 	case 8 :
-		typedef void ( idClass::*eventCallback_8_t )( const int, const int, const int, const int, const int, const int, const int, const int );
+		typedef void ( idClass::*eventCallback_8_t )( const intptr_t, const intptr_t, const intptr_t, const intptr_t, const intptr_t, const intptr_t, const intptr_t, const intptr_t );
 		( this->*( eventCallback_8_t )callback )( data[ 0 ], data[ 1 ], data[ 2 ], data[ 3 ], data[ 4 ], data[ 5 ], data[ 6 ], data[ 7 ] );
 		break;
 

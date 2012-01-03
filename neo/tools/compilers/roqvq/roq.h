@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -28,14 +28,12 @@ If you have questions concerning this license or the applicable additional terms
 #ifndef __roq_h__
 #define __roq_h__
 
-#include "gdefs.h"
-#include "roqParam.h"
-#include "quaddefs.h"
-#define JPEG_INTERNALS
-extern "C" {
-#include "../../../renderer/jpeg-6/jpeglib.h"
-}
-#pragma once
+//#define JPEG_INTERNALS
+#include <jpeglib.h>
+
+#include "tools/compilers/roqvq/gdefs.h"
+#include "tools/compilers/roqvq/roqParam.h"
+#include "tools/compilers/roqvq/quaddefs.h"
 
 class codec;
 class roqParam;
@@ -49,21 +47,21 @@ public:
 						~NSBitmapImageRep();
 
 	NSBitmapImageRep &	operator=( const NSBitmapImageRep &a );
-	
+
 	int					samplesPerPixel( void );
 	int					pixelsWide( void );
 	int					pixelsHigh( void );
 	byte *				bitmapData( void );
 	bool				hasAlpha( void );
 	bool				isPlanar( void );
-	
+
 private:
 
 	byte *				bmap;
 	int					width;
 	int					height;
 	ID_TIME_T				timestamp;
-	
+
 };
 
 class roq {
@@ -71,7 +69,7 @@ public:
 						roq();
 						~roq();
 
-	void				WriteLossless( void );
+	//void				WriteLossless( void );
 	void				LoadAndDisplayImage( const char *filename );
 	void				CloseRoQFile( bool which );
 	void				InitRoQFile( const char *roqFilename );
@@ -103,15 +101,17 @@ private:
 	int					SizeFile( idFile *ftosize );
 	void				CloseRoQFile( void );
 	void				WriteCodeBookToStream( byte *codebook, int csize, word cflags );
-	
+
+#if 0
 	static	void		JPEGInitDestination( j_compress_ptr cinfo );
 	static	boolean		JPEGEmptyOutputBuffer( j_compress_ptr cinfo );
 	static	void		JPEGTermDestination( j_compress_ptr cinfo );
-	
+
 	void				JPEGStartCompress( j_compress_ptr cinfo, bool write_all_tables );
 	JDIMENSION			JPEGWriteScanlines( j_compress_ptr cinfo, JSAMPARRAY scanlines, JDIMENSION num_lines );
 	void				JPEGDest( j_compress_ptr cinfo, byte* outfile, int size );
 	void				JPEGSave( char * filename, int quality, int image_width, int image_height, unsigned char *image_buffer );
+#endif
 
 	codec *				encoder;
 	roqParam *			paramFile;
@@ -121,15 +121,15 @@ private:
 	int					numQuadCels;
 	bool				quietMode;
 	bool				lastFrame;
-	idStr 				roqOutfile;
-	idStr 				currentFile;
+	idStr				roqOutfile;
+	idStr				currentFile;
 	int					numberOfFrames;
 	int					previousSize;
-	byte 				codes[4096];
+	byte				codes[4096];
 	bool				dataStuff;
 
 };
 
-extern roq *theRoQ;				// current roq 
+extern roq *theRoQ;				// current roq
 
 #endif /* !__roq_h__ */

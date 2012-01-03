@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,13 +26,13 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
+#include "framework/KeyInput.h"
+#include "ui/DeviceContext.h"
+#include "ui/Window.h"
+#include "ui/UserInterfaceLocal.h"
 
-#include "DeviceContext.h"
-#include "Window.h"
-#include "UserInterfaceLocal.h"
-#include "SliderWindow.h"
+#include "ui/SliderWindow.h"
 
 /*
 ============
@@ -106,7 +106,7 @@ bool idSliderWindow::ParseInternalVar(const char *_name, idParser *src) {
 }
 
 idWinVar *idSliderWindow::GetWinVarByName(const char *_name, bool fixup, drawWin_t** owner) {
- 
+
 	if (idStr::Icmp(_name, "value") == 0) {
 		return &value;
 	}
@@ -119,7 +119,7 @@ idWinVar *idSliderWindow::GetWinVarByName(const char *_name, bool fixup, drawWin
 	if ( idStr::Icmp( _name, "cvarGroup" ) == 0 ) {
 		return &cvarGroup;
 	}
-	
+
 	return idWindow::GetWinVarByName(_name, fixup, owner);
 }
 
@@ -135,7 +135,7 @@ const char *idSliderWindow::HandleEvent(const sysEvent_t *event, bool *updateVis
 		SetCapture(this);
 		RouteMouseCoords(0.0f, 0.0f);
 		return "";
-	} 
+	}
 
 	if ( key == K_RIGHTARROW || key == K_KP_RIGHTARROW || ( key == K_MOUSE2 && gui->CursorY() > thumbRect.y ) )  {
 		value = value + stepSize;
@@ -398,7 +398,7 @@ idSliderWindow::RunNamedEvent
 */
 void idSliderWindow::RunNamedEvent( const char* eventName ) {
 	idStr event, group;
-	
+
 	if ( !idStr::Cmpn( eventName, "cvar read ", 10 ) ) {
 		event = eventName;
 		group = event.Mid( 10, event.Length() - 10 );
@@ -413,4 +413,3 @@ void idSliderWindow::RunNamedEvent( const char* eventName ) {
 		}
 	}
 }
-

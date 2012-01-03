@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,27 +26,29 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
+#include "ui/Window.h"
+#include "ui/UserInterfaceLocal.h"
 
-#include "Window.h"
-#include "Winvar.h"
-#include "UserInterfaceLocal.h"
+#include "ui/Winvar.h"
 
-idWinVar::idWinVar() { 
-	guiDict = NULL; 
-	name = NULL; 
+const char *VAR_GUIPREFIX = "gui::";
+static const int VAR_GUIPREFIX_LEN = strlen(VAR_GUIPREFIX);
+
+idWinVar::idWinVar() {
+	guiDict = NULL;
+	name = NULL;
 	eval = true;
 }
 
-idWinVar::~idWinVar() { 
+idWinVar::~idWinVar() {
 	delete name;
 	name = NULL;
 }
 
-void idWinVar::SetGuiInfo(idDict *gd, const char *_name) { 
-	guiDict = gd; 
-	SetName(_name); 
+void idWinVar::SetGuiInfo(idDict *gd, const char *_name) {
+	guiDict = gd;
+	SetName(_name);
 }
 
 
@@ -80,4 +82,3 @@ void idMultiWinVar::SetGuiInfo( idDict *dict ) {
 		(*this)[i]->SetGuiInfo( dict, (*this)[i]->c_str() );
 	}
 }
-

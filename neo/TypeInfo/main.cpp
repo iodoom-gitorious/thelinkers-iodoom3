@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,11 +26,10 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../idlib/precompiled.h"
-#include "../sys/sys_local.h"
-#pragma hdrstop
+#include "sys/platform.h"
+#include "sys/sys_local.h"
 
-#include "TypeInfoGen.h"
+#include "TypeInfo/TypeInfoGen.h"
 
 idSession *			session = NULL;
 idDeclManager *		declManager = NULL;
@@ -189,10 +188,7 @@ int				Sys_ListFiles( const char *directory, const char *extension, idStrList &l
 
 #endif
 
-xthreadInfo *	g_threads[MAX_THREADS];
-int				g_thread_count;
-
-void			Sys_CreateThread( xthread_t function, void *parms, xthreadPriority priority, xthreadInfo &info, const char *name, xthreadInfo *threads[MAX_THREADS], int *thread_count ) {}
+void			Sys_CreateThread( xthread_t function, void *parms, xthreadInfo &info, const char *name ) {}
 void			Sys_DestroyThread( xthreadInfo& info ) {}
 
 void			Sys_EnterCriticalSection( int index ) {}
@@ -211,8 +207,7 @@ void			idSysLocal::DebugVPrintf( const char *fmt, va_list arg ) {}
 
 double			idSysLocal::GetClockTicks( void ) { return 0.0; }
 double			idSysLocal::ClockTicksPerSecond( void ) { return 1.0; }
-cpuid_t			idSysLocal::GetProcessorId( void ) { return (cpuid_t)0; }
-const char *	idSysLocal::GetProcessorString( void ) { return ""; }
+int				idSysLocal::GetProcessorId( void ) { return 0; }
 const char *	idSysLocal::FPU_GetState( void ) { return ""; }
 bool			idSysLocal::FPU_StackIsEmpty( void ) { return true; }
 void			idSysLocal::FPU_SetFTZ( bool enable ) {}
@@ -221,14 +216,9 @@ void			idSysLocal::FPU_SetDAZ( bool enable ) {}
 bool			idSysLocal::LockMemory( void *ptr, int bytes ) { return false; }
 bool			idSysLocal::UnlockMemory( void *ptr, int bytes ) { return false; }
 
-void			idSysLocal::GetCallStack( address_t *callStack, const int callStackSize ) { memset( callStack, 0, callStackSize * sizeof( callStack[0] ) ); }
-const char *	idSysLocal::GetCallStackStr( const address_t *callStack, const int callStackSize ) { return ""; }
-const char *	idSysLocal::GetCallStackCurStr( int depth ) { return ""; }
-void			idSysLocal::ShutdownSymbols( void ) {}
-
-int				idSysLocal::DLL_Load( const char *dllName ) { return 0; }
-void *			idSysLocal::DLL_GetProcAddress( int dllHandle, const char *procName ) { return NULL; }
-void			idSysLocal::DLL_Unload( int dllHandle ) { }
+uintptr_t		idSysLocal::DLL_Load( const char *dllName ) { return 0; }
+void *			idSysLocal::DLL_GetProcAddress( uintptr_t dllHandle, const char *procName ) { return NULL; }
+void			idSysLocal::DLL_Unload( uintptr_t dllHandle ) { }
 void			idSysLocal::DLL_GetFileName( const char *baseName, char *dllName, int maxLength ) { }
 
 sysEvent_t		idSysLocal::GenerateMouseButtonEvent( int button, bool down ) { sysEvent_t ev; memset( &ev, 0, sizeof( ev ) ); return ev; }

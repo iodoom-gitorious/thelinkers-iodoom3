@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,8 +26,10 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
+#include "idlib/containers/List.h"
+
+#include "idlib/bv/Frustum.h"
 
 //#define FRUSTUM_DEBUG
 
@@ -2044,8 +2046,6 @@ bool idFrustum::ProjectionBounds( const idBounds &bounds, idBounds &projectionBo
 	return ProjectionBounds( idBox( bounds, vec3_origin, mat3_identity ), projectionBounds );
 }
 
-#ifndef __linux__
-
 /*
 ============
 idFrustum::ProjectionBounds
@@ -2158,8 +2158,6 @@ bool idFrustum::ProjectionBounds( const idBox &box, idBounds &projectionBounds )
 
 	return true;
 }
-
-#endif
 
 /*
 ============

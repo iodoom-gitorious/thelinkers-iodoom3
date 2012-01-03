@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,9 +26,16 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
+#include "idlib/containers/List.h"
+#include "idlib/math/Math.h"
+#include "idlib/math/Angles.h"
+#include "idlib/math/Quat.h"
+#include "idlib/math/Rotation.h"
+#include "idlib/Str.h"
+#include "framework/Common.h"
 
+#include "idlib/math/Matrix.h"
 
 //===============================================================
 //
@@ -184,11 +191,11 @@ idQuat idMat3::ToQuat( void ) const {
 	float		trace;
 	float		s;
 	float		t;
-	int     	i;
+	int	i;
 	int			j;
 	int			k;
 
-	static int 	next[ 3 ] = { 1, 2, 0 };
+	static int	next[ 3 ] = { 1, 2, 0 };
 
 	trace = mat[ 0 ][ 0 ] + mat[ 1 ][ 1 ] + mat[ 2 ][ 2 ];
 
@@ -248,17 +255,17 @@ idRotation idMat3::ToRotation( void ) const {
 	float		trace;
 	float		s;
 	float		t;
-	int     	i;
+	int	i;
 	int			j;
 	int			k;
-	static int 	next[ 3 ] = { 1, 2, 0 };
+	static int	next[ 3 ] = { 1, 2, 0 };
 
 	trace = mat[ 0 ][ 0 ] + mat[ 1 ][ 1 ] + mat[ 2 ][ 2 ];
 	if ( trace > 0.0f ) {
 
 		t = trace + 1.0f;
 		s = idMath::InvSqrt( t ) * 0.5f;
-    
+
 		r.angle = s * t;
 		r.vec[0] = ( mat[ 2 ][ 1 ] - mat[ 1 ][ 2 ] ) * s;
 		r.vec[1] = ( mat[ 0 ][ 2 ] - mat[ 2 ][ 0 ] ) * s;
@@ -273,12 +280,12 @@ idRotation idMat3::ToRotation( void ) const {
 		if ( mat[ 2 ][ 2 ] > mat[ i ][ i ] ) {
 			i = 2;
 		}
-		j = next[ i ];  
+		j = next[ i ];
 		k = next[ j ];
-    
+
 		t = ( mat[ i ][ i ] - ( mat[ j ][ j ] + mat[ k ][ k ] ) ) + 1.0f;
 		s = idMath::InvSqrt( t ) * 0.5f;
-    
+
 		r.vec[i]	= s * t;
 		r.angle		= ( mat[ k ][ j ] - mat[ j ][ k ] ) * s;
 		r.vec[j]	= ( mat[ j ][ i ] + mat[ i ][ j ] ) * s;
@@ -629,11 +636,11 @@ idMat4::Transpose
 idMat4 idMat4::Transpose( void ) const {
 	idMat4	transpose;
 	int		i, j;
-   
+
 	for( i = 0; i < 4; i++ ) {
 		for( j = 0; j < 4; j++ ) {
 			transpose[ i ][ j ] = mat[ j ][ i ];
-        }
+		}
 	}
 	return transpose;
 }
@@ -646,13 +653,13 @@ idMat4::TransposeSelf
 idMat4 &idMat4::TransposeSelf( void ) {
 	float	temp;
 	int		i, j;
-   
+
 	for( i = 0; i < 4; i++ ) {
 		for( j = i + 1; j < 4; j++ ) {
 			temp = mat[ i ][ j ];
 			mat[ i ][ j ] = mat[ j ][ i ];
 			mat[ j ][ i ] = temp;
-        }
+		}
 	}
 	return *this;
 }
@@ -1064,11 +1071,11 @@ idMat5::Transpose
 idMat5 idMat5::Transpose( void ) const {
 	idMat5	transpose;
 	int		i, j;
-   
+
 	for( i = 0; i < 5; i++ ) {
 		for( j = 0; j < 5; j++ ) {
 			transpose[ i ][ j ] = mat[ j ][ i ];
-        }
+		}
 	}
 	return transpose;
 }
@@ -1081,13 +1088,13 @@ idMat5::TransposeSelf
 idMat5 &idMat5::TransposeSelf( void ) {
 	float	temp;
 	int		i, j;
-   
+
 	for( i = 0; i < 5; i++ ) {
 		for( j = i + 1; j < 5; j++ ) {
 			temp = mat[ i ][ j ];
 			mat[ i ][ j ] = mat[ j ][ i ];
 			mat[ j ][ i ] = temp;
-        }
+		}
 	}
 	return *this;
 }
@@ -1178,7 +1185,7 @@ bool idMat5::InverseSelf( void ) {
 	// determinant of 5x5 matrix
 	det = mat[0][0] * det4_1234_1234 - mat[0][1] * det4_1234_0234 + mat[0][2] * det4_1234_0134 - mat[0][3] * det4_1234_0124 + mat[0][4] * det4_1234_0123;
 
-	if( idMath::Fabs( det ) < MATRIX_INVERSE_EPSILON ) {  
+	if( idMath::Fabs( det ) < MATRIX_INVERSE_EPSILON ) {
 		return false;
 	}
 
@@ -1338,7 +1345,7 @@ bool idMat5::InverseFastSelf( void ) {
 	// determinant of 5x5 matrix
 	det = mat[0][0] * det4_1234_1234 - mat[0][1] * det4_1234_0234 + mat[0][2] * det4_1234_0134 - mat[0][3] * det4_1234_0124 + mat[0][4] * det4_1234_0123;
 
-	if( idMath::Fabs( det ) < MATRIX_INVERSE_EPSILON ) {  
+	if( idMath::Fabs( det ) < MATRIX_INVERSE_EPSILON ) {
 		return false;
 	}
 
@@ -1757,11 +1764,11 @@ idMat6::Transpose
 idMat6 idMat6::Transpose( void ) const {
 	idMat6	transpose;
 	int		i, j;
-   
+
 	for( i = 0; i < 6; i++ ) {
 		for( j = 0; j < 6; j++ ) {
 			transpose[ i ][ j ] = mat[ j ][ i ];
-        }
+		}
 	}
 	return transpose;
 }
@@ -1774,13 +1781,13 @@ idMat6::TransposeSelf
 idMat6 &idMat6::TransposeSelf( void ) {
 	float	temp;
 	int		i, j;
-   
+
 	for( i = 0; i < 6; i++ ) {
 		for( j = i + 1; j < 6; j++ ) {
 			temp = mat[ i ][ j ];
 			mat[ i ][ j ] = mat[ j ][ i ];
 			mat[ j ][ i ] = temp;
-        }
+		}
 	}
 	return *this;
 }
@@ -2936,7 +2943,7 @@ const char *idMat6::ToString( int precision ) const {
 //===============================================================
 
 float	idMatX::temp[MATX_MAX_TEMP+4];
-float *	idMatX::tempPtr = (float *) ( ( (int) idMatX::temp + 15 ) & ~15 );
+float *	idMatX::tempPtr = (float *) ( ( (intptr_t) idMatX::temp + 15 ) & ~15 );
 int		idMatX::tempIndex = 0;
 
 
@@ -3125,9 +3132,9 @@ bool idMatX::IsOrthonormal( const float epsilon ) const {
 
 		ptr2 = mat + i;
 		sum = ptr2[0] * ptr2[0] - 1.0f;
-		for ( i = 1; i < numRows; i++ ) {
+		for ( int j = 1; j < numRows; j++ ) {
 			ptr2 += numColumns;
-			sum += ptr2[i] * ptr2[i];
+			sum += ptr2[i] * ptr2[j];
 		}
 		if ( idMath::Fabs( sum ) > epsilon ) {
 			return false;
@@ -3490,9 +3497,9 @@ idMatX::Update_RowColumn
 
   Updates the matrix to obtain the matrix:
 
-      [ 0  a  0 ]
+	  [ 0  a  0 ]
   A + [ d  b  e ]
-      [ 0  c  0 ]
+	  [ 0  c  0 ]
 
   where: a = v[0,r-1], b = v[r], c = v[r+1,numRows-1], d = w[0,r-1], w[r] = 0.0f, e = w[r+1,numColumns-1]
 ============
@@ -3518,9 +3525,9 @@ idMatX::Update_RowColumnSymmetric
 
   Updates the matrix to obtain the matrix:
 
-      [ 0  a  0 ]
+	  [ 0  a  0 ]
   A + [ a  b  c ]
-      [ 0  c  0 ]
+	  [ 0  c  0 ]
 
   where: a = v[0,r-1], b = v[r], c = v[r+1,numRows-1]
 ============
@@ -3743,9 +3750,9 @@ idMatX::Inverse_UpdateRowColumn
 
   Updates the in-place inverse to obtain the inverse for the matrix:
 
-      [ 0  a  0 ]
+	  [ 0  a  0 ]
   A + [ d  b  e ]
-      [ 0  c  0 ]
+	  [ 0  c  0 ]
 
   where: a = v[0,r-1], b = v[r], c = v[r+1,numRows-1], d = w[0,r-1], w[r] = 0.0f, e = w[r+1,numColumns-1]
 ============
@@ -3935,7 +3942,7 @@ bool idMatX::LU_Factor( int *index, float *det ) {
 	}
 
 	return true;
-}   
+}
 
 /*
 ============
@@ -4012,9 +4019,9 @@ idMatX::LU_UpdateRowColumn
 
   Updates the in-place LU factorization to obtain the factors for the matrix:
 
-       [ 0  a  0 ]
+	   [ 0  a  0 ]
   LU + [ d  b  e ]
-       [ 0  c  0 ]
+	   [ 0  c  0 ]
 
   where: a = v[0,r-1], b = v[r], c = v[r+1,numRows-1], d = w[0,r-1], w[r] = 0.0f, e = w[r+1,numColumns-1]
 ============
@@ -4588,9 +4595,9 @@ idMatX::QR_UpdateRowColumn
 
   Updates the unpacked QR factorization to obtain the factors for the matrix:
 
-       [ 0  a  0 ]
+	   [ 0  a  0 ]
   QR + [ d  b  e ]
-       [ 0  c  0 ]
+	   [ 0  c  0 ]
 
   where: a = v[0,r-1], b = v[r], c = v[r+1,numRows-1], d = w[0,r-1], w[r] = 0.0f, e = w[r+1,numColumns-1]
 ============
@@ -5382,9 +5389,9 @@ idMatX::Cholesky_UpdateRowColumn
 
   Updates the in-place Cholesky factorization to obtain the factors for the matrix:
 
-        [ 0  a  0 ]
+		[ 0  a  0 ]
   LL' + [ a  b  c ]
-        [ 0  c  0 ]
+		[ 0  c  0 ]
 
   where: a = v[0,r-1], b = v[r], c = v[r+1,numRows-1]
 ============
@@ -5392,7 +5399,7 @@ idMatX::Cholesky_UpdateRowColumn
 bool idMatX::Cholesky_UpdateRowColumn( const idVecX &v, int r ) {
 	int i, j;
 	double sum;
-	float *original, *y;
+	float *original;
 	idVecX addSub;
 
 	assert( numRows == numColumns );
@@ -5406,8 +5413,8 @@ bool idMatX::Cholesky_UpdateRowColumn( const idVecX &v, int r ) {
 		if ( numColumns == 1 ) {
 			double v0 = v[0];
 			sum = (*this)[0][0];
-			sum = sum * sum; 
-			sum = sum + v0; 
+			sum = sum * sum;
+			sum = sum + v0;
 			if ( sum <= 0.0f ) {
 				return false;
 			}
@@ -5421,7 +5428,6 @@ bool idMatX::Cholesky_UpdateRowColumn( const idVecX &v, int r ) {
 	} else {
 
 		original = (float *) _alloca16( numColumns * sizeof( float ) );
-		y = (float *) _alloca16( numColumns * sizeof( float ) );
 
 		// calculate original row/column of matrix
 		for ( i = 0; i < numRows; i++ ) {
@@ -5761,8 +5767,8 @@ bool idMatX::LDLT_Factor( void ) {
 		sum = (*this)[i][i];
 		for ( j = 0; j < i; j++ ) {
 			d = (*this)[i][j];
-		    v[j] = (*this)[j][j] * d;
-		    sum -= v[j] * d;
+			v[j] = (*this)[j][j] * d;
+			sum -= v[j] * d;
 		}
 
 		if ( sum == 0.0f ) {
@@ -5773,11 +5779,11 @@ bool idMatX::LDLT_Factor( void ) {
 		d = 1.0f / sum;
 
 		for ( j = i + 1; j < numRows; j++ ) {
-		    sum = (*this)[j][i];
+			sum = (*this)[j][i];
 			for ( k = 0; k < i; k++ ) {
 				sum -= (*this)[j][k] * v[k];
 			}
-		    (*this)[j][i] = sum * d;
+			(*this)[j][i] = sum * d;
 		}
 	}
 
@@ -5837,9 +5843,9 @@ idMatX::LDLT_UpdateRowColumn
 
   Updates the in-place LDL' factorization to obtain the factors for the matrix:
 
-         [ 0  a  0 ]
+		 [ 0  a  0 ]
   LDL' + [ a  b  c ]
-         [ 0  c  0 ]
+		 [ 0  c  0 ]
 
   where: a = v[0,r-1], b = v[r], c = v[r+1,numRows-1]
 ============
@@ -6391,7 +6397,7 @@ void idMatX::HouseholderReduction( idVecX &diag, idVecX &subd ) {
 						(*this)[i1][i2] -= f * subd[i2] + g * (*this)[i0][i2];
 					}
 				}
-            }
+			}
 		} else {
 			subd[i0] = (*this)[i0][i3];
 		}
@@ -6440,7 +6446,7 @@ idMatX::QL
 ============
 */
 bool idMatX::QL( idVecX &diag, idVecX &subd ) {
-    const int maxIter = 32;
+	const int maxIter = 32;
 	int i0, i1, i2, i3;
 	float a, b, f, g, r, p, s, c;
 
@@ -6710,7 +6716,7 @@ bool idMatX::HessenbergToRealSchur( idMatX &H, idVecX &realEigenValues, idVecX &
 			}
 			l--;
 		}
-	   
+
 		// check for convergence
 		if ( l == n ) {			// one root found
 			H[n][n] = H[n][n] + exshift;
@@ -6918,7 +6924,7 @@ bool idMatX::HessenbergToRealSchur( idMatX &H, idVecX &realEigenValues, idVecX &
 			}
 		}
 	}
-	
+
 	// backsubstitute to find vectors of upper triangular form
 	if ( norm == 0.0f ) {
 		return false;
@@ -7064,7 +7070,7 @@ idMatX::Eigen_Solve
 ============
 */
 bool idMatX::Eigen_Solve( idVecX &realEigenValues, idVecX &imaginaryEigenValues ) {
-    idMatX H;
+	idMatX H;
 
 	assert( numRows == numColumns );
 
@@ -7073,11 +7079,11 @@ bool idMatX::Eigen_Solve( idVecX &realEigenValues, idVecX &imaginaryEigenValues 
 
 	H = *this;
 
-    // reduce to Hessenberg form
-    HessenbergReduction( H );
+	// reduce to Hessenberg form
+	HessenbergReduction( H );
 
-    // reduce Hessenberg to real Schur form
-    return HessenbergToRealSchur( H, realEigenValues, imaginaryEigenValues );
+	// reduce Hessenberg to real Schur form
+	return HessenbergToRealSchur( H, realEigenValues, imaginaryEigenValues );
 }
 
 /*
@@ -7089,7 +7095,7 @@ void idMatX::Eigen_SortIncreasing( idVecX &eigenValues ) {
 	int i, j, k;
 	float min;
 
-	for ( i = 0, j; i <= numRows - 2; i++ ) {
+	for ( i = 0; i <= numRows - 2; i++ ) {
 		j = i;
 		min = eigenValues[j];
 		for ( k = i + 1; k < numRows; k++ ) {
@@ -7114,7 +7120,7 @@ void idMatX::Eigen_SortDecreasing( idVecX &eigenValues ) {
 	int i, j, k;
 	float max;
 
-	for ( i = 0, j; i <= numRows - 2; i++ ) {
+	for ( i = 0; i <= numRows - 2; i++ ) {
 		j = i;
 		max = eigenValues[j];
 		for ( k = i + 1; k < numRows; k++ ) {
@@ -7258,7 +7264,7 @@ void idMatX::Test( void ) {
 	// invert m1
 	m1.Inverse_GaussJordan();
 
-	// modify and invert m2 
+	// modify and invert m2
 	m2.Update_RankOne( v, w, 1.0f );
 	if ( !m2.Inverse_GaussJordan() ) {
 		assert( 0 );
@@ -7314,7 +7320,7 @@ void idMatX::Test( void ) {
 	// invert m1
 	m1.Inverse_GaussJordan();
 
-	// modify and invert m2 
+	// modify and invert m2
 	m2.Update_Increment( v, w );
 	if ( !m2.Inverse_GaussJordan() ) {
 		assert( 0 );
@@ -7386,7 +7392,7 @@ void idMatX::Test( void ) {
 	// factor m1
 	m1.LU_Factor( index1 );
 
-	// modify and factor m2 
+	// modify and factor m2
 	m2.Update_RankOne( v, w, 1.0f );
 	if ( !m2.LU_Factor( index2 ) ) {
 		assert( 0 );
@@ -7450,7 +7456,7 @@ void idMatX::Test( void ) {
 	// factor m1
 	m1.LU_Factor( index1 );
 
-	// modify and factor m2 
+	// modify and factor m2
 	m2.Update_Increment( v, w );
 	if ( !m2.LU_Factor( index2 ) ) {
 		assert( 0 );
@@ -7556,7 +7562,7 @@ void idMatX::Test( void ) {
 	m1.QR_Factor( c, d );
 	m1.QR_UnpackFactors( q1, r1, c, d );
 
-	// modify and factor m2 
+	// modify and factor m2
 	m2.Update_RankOne( v, w, 1.0f );
 	if ( !m2.QR_Factor( c, d ) ) {
 		assert( 0 );
@@ -7626,7 +7632,7 @@ void idMatX::Test( void ) {
 	m1.QR_Factor( c, d );
 	m1.QR_UnpackFactors( q1, r1, c, d );
 
-	// modify and factor m2 
+	// modify and factor m2
 	m2.Update_Increment( v, w );
 	if ( !m2.QR_Factor( c, d ) ) {
 		assert( 0 );
@@ -7752,7 +7758,7 @@ void idMatX::Test( void ) {
 	m1.Cholesky_Factor();
 	m1.ClearUpperTriangle();
 
-	// modify and factor m2 
+	// modify and factor m2
 	m2.Update_RankOneSymmetric( w, 1.0f );
 	if ( !m2.Cholesky_Factor() ) {
 		assert( 0 );
@@ -7815,7 +7821,7 @@ void idMatX::Test( void ) {
 	// factor m1
 	m1.Cholesky_Factor();
 
-	// modify and factor m2 
+	// modify and factor m2
 	m2.Update_IncrementSymmetric( w );
 	if ( !m2.Cholesky_Factor() ) {
 		assert( 0 );
@@ -7908,7 +7914,7 @@ void idMatX::Test( void ) {
 	m1.LDLT_Factor();
 	m1.ClearUpperTriangle();
 
-	// modify and factor m2 
+	// modify and factor m2
 	m2.Update_RankOneSymmetric( w, 1.0f );
 	if ( !m2.LDLT_Factor() ) {
 		assert( 0 );
@@ -7969,7 +7975,7 @@ void idMatX::Test( void ) {
 	// factor m1
 	m1.LDLT_Factor();
 
-	// modify and factor m2 
+	// modify and factor m2
 	m2.Update_IncrementSymmetric( w );
 	if ( !m2.LDLT_Factor() ) {
 		assert( 0 );

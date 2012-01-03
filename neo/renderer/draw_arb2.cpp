@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,19 +26,10 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
+#include "renderer/VertexCache.h"
 
-#include "tr_local.h"
-
-#include "cg_explicit.h"
-
-CGcontext cg_context;
-
-static void cg_error_callback( void ) {
-	CGerror i = cgGetError();
-	common->Printf( "Cg error (%d): %s\n", i, cgGetErrorString(i) );
-}
+#include "renderer/tr_local.h"
 
 /*
 =========================================================================================
@@ -242,7 +233,6 @@ RB_ARB2_DrawInteractions
 */
 void RB_ARB2_DrawInteractions( void ) {
 	viewLight_t		*vLight;
-	const idMaterial	*lightShader;
 
 	GL_SelectTexture( 0 );
 	qglDisableClientState( GL_TEXTURE_COORD_ARRAY );
@@ -266,13 +256,11 @@ void RB_ARB2_DrawInteractions( void ) {
 			continue;
 		}
 
-		lightShader = vLight->lightShader;
-
 		// clear the stencil buffer if needed
 		if ( vLight->globalShadows || vLight->localShadows ) {
 			backEnd.currentScissor = vLight->scissorRect;
 			if ( r_useScissor.GetBool() ) {
-				qglScissor( backEnd.viewDef->viewport.x1 + backEnd.currentScissor.x1, 
+				qglScissor( backEnd.viewDef->viewport.x1 + backEnd.currentScissor.x1,
 					backEnd.viewDef->viewport.y1 + backEnd.currentScissor.y1,
 					backEnd.currentScissor.x2 + 1 - backEnd.currentScissor.x1,
 					backEnd.currentScissor.y2 + 1 - backEnd.currentScissor.y1 );
@@ -369,7 +357,7 @@ void R_LoadARBProgram( int progIndex ) {
 	fullPath += progs[progIndex].name;
 	char	*fileBuffer;
 	char	*buffer;
-	char	*start, *end;
+	char	*start = NULL, *end;
 
 	common->Printf( "%s", fullPath.c_str() );
 
@@ -406,14 +394,14 @@ void R_LoadARBProgram( int progIndex ) {
 			common->Printf( ": GL_VERTEX_PROGRAM_ARB not available\n" );
 			return;
 		}
-		start = strstr( (char *)buffer, "!!ARBvp" );
+		start = strstr( buffer, "!!ARBvp" );
 	}
 	if ( progs[progIndex].target == GL_FRAGMENT_PROGRAM_ARB ) {
 		if ( !glConfig.ARBFragmentProgramAvailable ) {
 			common->Printf( ": GL_FRAGMENT_PROGRAM_ARB not available\n" );
 			return;
 		}
-		start = strstr( (char *)buffer, "!!ARBfp" );
+		start = strstr( buffer, "!!ARBfp" );
 	}
 	if ( !start ) {
 		common->Printf( ": !!ARB not found\n" );
@@ -431,7 +419,7 @@ void R_LoadARBProgram( int progIndex ) {
 	qglGetError();
 
 	qglProgramStringARB( progs[progIndex].target, GL_PROGRAM_FORMAT_ASCII_ARB,
-		strlen( start ), (unsigned char *)start );
+		strlen( start ), start );
 
 	err = qglGetError();
 	qglGetIntegerv( GL_PROGRAM_ERROR_POSITION_ARB, (GLint *)&ofs );
@@ -440,7 +428,7 @@ void R_LoadARBProgram( int progIndex ) {
 		common->Printf( "\nGL_PROGRAM_ERROR_STRING_ARB: %s\n", str );
 		if ( ofs < 0 ) {
 			common->Printf( "GL_PROGRAM_ERROR_POSITION_ARB < 0 with error\n" );
-		} else if ( ofs >= (int)strlen( (char *)start ) ) {
+		} else if ( ofs >= (int)strlen( start ) ) {
 			common->Printf( "error at end of program\n" );
 		} else {
 			common->Printf( "error at %i:\n%s", ofs, start + ofs );
@@ -534,4 +522,3 @@ void R_ARB2_Init( void ) {
 
 	glConfig.allowARB2Path = true;
 }
-

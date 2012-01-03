@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,10 +26,12 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../../../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
+#include "idlib/MapFile.h"
+#include "framework/Common.h"
+#include "framework/FileSystem.h"
 
-#include "Brush.h"
+#include "tools/compilers/aas/Brush.h"
 
 #define BRUSH_EPSILON					0.1f
 #define BRUSH_PLANE_NORMAL_EPSILON		0.00001f
@@ -44,7 +46,7 @@ If you have questions concerning this license or the applicable additional terms
 DisplayRealTimeString
 ============
 */
-void DisplayRealTimeString( char *string, ... ) {
+void DisplayRealTimeString( const char *string, ... ) {
 	va_list argPtr;
 	char buf[MAX_STRING_CHARS];
 	static int lastUpdateTime;

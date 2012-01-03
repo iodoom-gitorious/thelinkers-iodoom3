@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,13 +26,15 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
+#include "framework/FileSystem.h"
+#include "framework/DemoFile.h"
+#include "framework/KeyInput.h"
+#include "ui/ListGUILocal.h"
+#include "ui/DeviceContext.h"
+#include "ui/Window.h"
 
-#include "ListGUILocal.h"
-#include "DeviceContext.h"
-#include "Window.h"
-#include "UserInterfaceLocal.h"
+#include "ui/UserInterfaceLocal.h"
 
 extern idCVar r_skipGuiShaders;		// 1 = don't render any gui elements on surfaces
 
@@ -185,7 +187,6 @@ idUserInterface *idUserInterfaceManagerLocal::FindGui( const char *qpath, bool a
 	int c = guis.Num();
 
 	for ( int i = 0; i < c; i++ ) {
-		idUserInterfaceLocal *gui = guis[i];
 		if ( !idStr::Icmp( guis[i]->GetSourceFile(), qpath ) ) {
 			if ( !forceNOTUnique && ( needUnique || guis[i]->IsInteractive() ) ) {
 				break;
@@ -266,15 +267,13 @@ bool idUserInterfaceLocal::IsInteractive() const {
 	return interactive;
 }
 
-bool idUserInterfaceLocal::InitFromFile( const char *qpath, bool rebuild, bool cache ) { 
+bool idUserInterfaceLocal::InitFromFile( const char *qpath, bool rebuild, bool cache ) {
 
-	if ( !( qpath && *qpath ) ) { 
+	if ( !( qpath && *qpath ) ) {
 		// FIXME: Memory leak!!
 		return false;
 	}
 
-	int sz = sizeof( idWindow );
-	sz = sizeof( idSimpleWindow );
 	loading = true;
 
 	if ( rebuild ) {
@@ -329,7 +328,7 @@ bool idUserInterfaceLocal::InitFromFile( const char *qpath, bool rebuild, bool c
 
 	loading = false;
 
-	return true; 
+	return true;
 }
 
 const char *idUserInterfaceLocal::HandleEvent( const sysEvent_t *event, int _time, bool *updateVisuals ) {
@@ -356,7 +355,7 @@ const char *idUserInterfaceLocal::HandleEvent( const sysEvent_t *event, int _tim
 
 	if ( desktop ) {
 		return desktop->HandleEvent( event, updateVisuals );
-	} 
+	}
 
 	return "";
 }
@@ -414,7 +413,7 @@ const char* idUserInterfaceLocal::GetStateString( const char *varName, const cha
 }
 
 bool idUserInterfaceLocal::GetStateBool( const char *varName, const char* defaultString ) const {
-	return state.GetBool(varName, defaultString); 
+	return state.GetBool(varName, defaultString);
 }
 
 int idUserInterfaceLocal::GetStateInt( const char *varName, const char* defaultString ) const {
@@ -468,8 +467,8 @@ void idUserInterfaceLocal::ReadFromDemoFile( class idDemoFile *f ) {
 	if (desktop == NULL) {
 		f->Log("creating new gui\n");
 		desktop = new idWindow(this);
-	   	desktop->SetFlag( WIN_DESKTOP );
-	   	desktop->SetDC( &uiManagerLocal.dc );
+		desktop->SetFlag( WIN_DESKTOP );
+		desktop->SetDC( &uiManagerLocal.dc );
 		desktop->ReadFromDemoFile(f);
 	} else {
 		f->Log("re-using gui\n");
@@ -564,7 +563,7 @@ bool idUserInterfaceLocal::ReadFromSaveGame( idFile *savefile ) {
 		savefile->Read( &len, sizeof( len ) );
 		value.Fill( ' ', len );
 		savefile->Read( &value[0], len );
-		
+
 		state.Set( key, value );
 	}
 
@@ -637,4 +636,3 @@ void idUserInterfaceLocal::SetCursor( float x, float y ) {
 	cursorX = x;
 	cursorY = y;
 }
-

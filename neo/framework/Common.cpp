@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,10 +26,30 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../idlib/precompiled.h"
-#pragma hdrstop
+#include <SDL.h>
 
-#include "../renderer/Image.h"
+#include "sys/platform.h"
+#include "idlib/containers/HashTable.h"
+#include "idlib/LangDict.h"
+#include "idlib/MapFile.h"
+#include "cm/CollisionModel.h"
+#include "framework/async/AsyncNetwork.h"
+#include "framework/async/NetworkSystem.h"
+#include "framework/BuildVersion.h"
+#include "framework/Licensee.h"
+#include "framework/Console.h"
+#include "framework/Session.h"
+#include "framework/Game.h"
+#include "framework/KeyInput.h"
+#include "framework/EventLoop.h"
+#include "renderer/Image.h"
+#include "renderer/Model.h"
+#include "renderer/ModelManager.h"
+#include "renderer/RenderSystem.h"
+#include "tools/compilers/compiler_public.h"
+#include "tools/compilers/aas/AASFileManager.h"
+
+#include "framework/Common.h"
 
 #define	MAX_PRINT_MSG_SIZE	4096
 #define MAX_WARNING_LIST	256
@@ -62,7 +82,7 @@ idCVar com_asyncInput( "com_asyncInput", "0", CVAR_BOOL|CVAR_SYSTEM, "sample inp
 #define ASYNCSOUND_INFO "0: mix sound inline, 1: memory mapped async mix, 2: callback mixing, 3: write async mix"
 #if defined( MACOS_X )
 idCVar com_asyncSound( "com_asyncSound", "2", CVAR_INTEGER|CVAR_SYSTEM|CVAR_ROM, ASYNCSOUND_INFO );
-#elif defined( __linux__ )
+#elif defined( __unix__ )
 idCVar com_asyncSound( "com_asyncSound", "3", CVAR_INTEGER|CVAR_SYSTEM|CVAR_ROM, ASYNCSOUND_INFO );
 #else
 idCVar com_asyncSound( "com_asyncSound", "1", CVAR_INTEGER|CVAR_SYSTEM, ASYNCSOUND_INFO, 0, 1 );
@@ -115,7 +135,7 @@ class idCommonLocal : public idCommon {
 public:
 								idCommonLocal( void );
 
-	virtual void				Init( int argc, const char **argv, const char *cmdline );
+	virtual void				Init( int argc, char **argv );
 	virtual void				Shutdown( void );
 	virtual void				Quit( void );
 	virtual bool				IsInitialized( void ) const;
@@ -163,7 +183,7 @@ private:
 	void						InitRenderSystem( void );
 	void						InitSIMD( void );
 	bool						AddStartupCommands( void );
-	void						ParseCommandLine( int argc, const char **argv );
+	void						ParseCommandLine( int argc, char **argv );
 	void						ClearCommandLine( void );
 	bool						SafeMode( void );
 	void						CheckToolMode( void );
@@ -193,18 +213,19 @@ private:
 	idStrList					warningList;
 	idStrList					errorList;
 
-	int							gameDLL;
+	uintptr_t					gameDLL;
 
 	idLangDict					languageDict;
 
 #ifdef ID_WRITE_VERSION
 	idCompressor *				config_compressor;
 #endif
+
+	SDL_TimerID					async_timer;
 };
 
 idCommonLocal	commonLocal;
 idCommon *		common = &commonLocal;
-
 
 /*
 ==================
@@ -230,6 +251,8 @@ idCommonLocal::idCommonLocal( void ) {
 #ifdef ID_WRITE_VERSION
 	config_compressor = NULL;
 #endif
+
+	async_timer = NULL;
 }
 
 /*
@@ -349,7 +372,7 @@ void idCommonLocal::VPrintf( const char *fmt, va_list args ) {
 	// don't overflow
 	if ( idStr::vsnPrintf( msg+timeLength, MAX_PRINT_MSG_SIZE-timeLength-1, fmt, args ) < 0 ) {
 		msg[sizeof(msg)-2] = '\n'; msg[sizeof(msg)-1] = '\0'; // avoid output garbling
-		Sys_Printf( "idCommon::VPrintf: truncated to %d characters\n", strlen(msg)-1 );
+		Sys_Printf( "idCommon::VPrintf: truncated to %zd characters\n", strlen(msg)-1 );
 	}
 
 	if ( rd_buffer ) {
@@ -474,7 +497,7 @@ prints message that only shows up if the "developer" cvar is set
 void idCommonLocal::DPrintf( const char *fmt, ... ) {
 	va_list		argptr;
 	char		msg[MAX_PRINT_MSG_SIZE];
-		
+
 	if ( !cvarSystem->IsInitialized() || !com_developer.GetBool() ) {
 		return;			// don't confuse non-developers with techie stuff...
 	}
@@ -483,7 +506,7 @@ void idCommonLocal::DPrintf( const char *fmt, ... ) {
 	idStr::vsnPrintf( msg, sizeof(msg), fmt, argptr );
 	va_end( argptr );
 	msg[sizeof(msg)-1] = '\0';
-	
+
 	// never refresh the screen, which could cause reentrency problems
 	bool temp = com_refreshOnPrint;
 	com_refreshOnPrint = false;
@@ -503,7 +526,7 @@ prints warning message in yellow that only shows up if the "developer" cvar is s
 void idCommonLocal::DWarning( const char *fmt, ... ) {
 	va_list		argptr;
 	char		msg[MAX_PRINT_MSG_SIZE];
-		
+
 	if ( !com_developer.GetBool() ) {
 		return;			// don't confuse non-developers with techie stuff...
 	}
@@ -526,7 +549,7 @@ prints WARNING %s and adds the warning message to a queue to be printed later on
 void idCommonLocal::Warning( const char *fmt, ... ) {
 	va_list		argptr;
 	char		msg[MAX_PRINT_MSG_SIZE];
-		
+
 	va_start( argptr, fmt );
 	idStr::vsnPrintf( msg, sizeof(msg), fmt, argptr );
 	va_end( argptr );
@@ -816,11 +839,10 @@ idCmdArgs	com_consoleLines[MAX_CONSOLE_LINES];
 idCommonLocal::ParseCommandLine
 ==================
 */
-void idCommonLocal::ParseCommandLine( int argc, const char **argv ) {
-	int i, current_count;
+void idCommonLocal::ParseCommandLine( int argc, char **argv ) {
+	int i;
 
 	com_numConsoleLines = 0;
-	current_count = 0;
 	// API says no program path
 	for ( i = 0; i < argc; i++ ) {
 		if ( argv[ i ][ 0 ] == '+' ) {
@@ -890,7 +912,7 @@ void idCommonLocal::CheckToolMode( void ) {
 		else if ( !idStr::Icmp( com_consoleLines[ i ].Argv(0), "materialEditor" ) ) {
 			com_editors |= EDITOR_MATERIAL;
 		}
-		
+
 		if ( !idStr::Icmp( com_consoleLines[ i ].Argv(0), "renderbump" )
 			|| !idStr::Icmp( com_consoleLines[ i ].Argv(0), "editor" )
 			|| !idStr::Icmp( com_consoleLines[ i ].Argv(0), "guieditor" )
@@ -1217,7 +1239,7 @@ static void PrintMemInfo_f( const idCmdArgs &args ) {
 		return;
 	}
 
-	f->Printf( "total(%s ) image(%s ) model(%s ) sound(%s ): %s\n", idStr::FormatNumber( mi.assetTotals ).c_str(), idStr::FormatNumber( mi.imageAssetsTotal ).c_str(), 
+	f->Printf( "total(%s ) image(%s ) model(%s ) sound(%s ): %s\n", idStr::FormatNumber( mi.assetTotals ).c_str(), idStr::FormatNumber( mi.imageAssetsTotal ).c_str(),
 		idStr::FormatNumber( mi.modelAssetsTotal ).c_str(), idStr::FormatNumber( mi.soundAssetsTotal ).c_str(), mi.filebase.c_str() );
 
 	fileSystem->CloseFile( f );
@@ -1356,7 +1378,11 @@ static void Com_Crash_f( const idCmdArgs &args ) {
 		return;
 	}
 
+#ifdef __GNUC__
+	__builtin_trap();
+#else
 	* ( int * ) 0 = 0x12345678;
+#endif
 }
 
 /*
@@ -1596,7 +1622,7 @@ idCommonLocal::FilterLangList
 ===============
 */
 void idCommonLocal::FilterLangList( idStrList* list, idStr lang ) {
-	
+
 	idStr temp;
 	for( int i = 0; i < list->Num(); i++ ) {
 		temp = (*list)[i];
@@ -1624,7 +1650,7 @@ void idCommonLocal::InitLanguageDict( void ) {
 	//to add new strings to the english language dictionary
 	idFileList*	langFiles;
 	langFiles =  fileSystem->ListFilesTree( "strings", ".lang", true );
-	
+
 	idStrList langList = langFiles->GetList();
 
 	StartupVariable( "sys_lang", false );	// let it be set on the command line - this is needed because this init happens very early
@@ -1633,7 +1659,7 @@ void idCommonLocal::InitLanguageDict( void ) {
 	//Loop through the list and filter
 	idStrList currentLangList = langList;
 	FilterLangList(&currentLangList, langName);
-	
+
 	if ( currentLangList.Num() == 0 ) {
 		// reset cvar to default and try to load again
 		cmdSystem->BufferCommandText( CMD_EXEC_NOW, "reset sys_lang" );
@@ -1743,7 +1769,7 @@ void idCommonLocal::LocalizeGui( const char *fileName, idLangDict &langDict ) {
 	if ( fileSystem->ReadFile( fileName, (void**)&buffer ) > 0 ) {
 		src.LoadMemory( buffer, strlen(buffer), fileName );
 		if ( src.IsLoaded() ) {
-			idFile *outFile = fileSystem->OpenFileWrite( fileName ); 
+			idFile *outFile = fileSystem->OpenFileWrite( fileName );
 			common->Printf( "Processing %s\n", fileName );
 			session->UpdateScreen();
 			idToken token;
@@ -1945,7 +1971,7 @@ int LocalizeMap(const char* mapName, idLangDict &langDict, ListHash& listHash, i
 	common->Printf("Localizing Map '%s'\n", mapName);
 
 	int strCount = 0;
-	
+
 	idMapFile map;
 	if ( map.Parse(mapName, false, false ) ) {
 		int count = map.GetNumEntities();
@@ -1965,13 +1991,13 @@ int LocalizeMap(const char* mapName, idLangDict &langDict, ListHash& listHash, i
 					for(int k = 0; k < list->Num(); k++) {
 
 						idStr val = ent->epairs.GetString((*list)[k], "");
-						
+
 						if(val.Length() && classname == "info_location" && (*list)[k] == "location") {
 							hasLocation = true;
 						}
 
 						if(val.Length() && TestMapVal(val)) {
-							
+
 							if(!hasLocation || (*list)[k] == "location") {
 								//Localize it!!!
 								strCount++;
@@ -2011,7 +2037,7 @@ int LocalizeMap(const char* mapName, idLangDict &langDict, ListHash& listHash, i
 			idStr bak = file.Left(file.Length() - 4);
 			bak.Append(".bak_loc");
 			fileSystem->CopyFile( file, bak );
-			
+
 			map.Write( mapName, ".map" );
 		}
 	}
@@ -2032,7 +2058,7 @@ void Com_LocalizeMaps_f( const idCmdArgs &args ) {
 	}
 
 	int strCount = 0;
-	
+
 	bool count = false;
 	bool dictUpdate = false;
 	bool write = false;
@@ -2061,7 +2087,7 @@ void Com_LocalizeMaps_f( const idCmdArgs &args ) {
 	}
 
 	common->SetRefreshOnPrint( true );
-	
+
 	ListHash listHash;
 	LoadMapLocalizeData(listHash);
 
@@ -2075,7 +2101,7 @@ void Com_LocalizeMaps_f( const idCmdArgs &args ) {
 		GetFileList("z:/d3xp/d3xp/maps/game", "*.map", files);
 		for ( int i = 0; i < files.Num(); i++ ) {
 			idStr file =  fileSystem->OSPathToRelativePath(files[i]);
-			strCount += LocalizeMap(file, strTable, listHash, excludeList, write);		
+			strCount += LocalizeMap(file, strTable, listHash, excludeList, write);
 		}
 	}
 
@@ -2128,7 +2154,7 @@ void Com_LocalizeGuis_f( const idCmdArgs &args ) {
 		} else {
 			files = fileSystem->ListFilesTree( "guis", "*.pd", true, "d3xp" );
 		}
-		
+
 		for ( int i = 0; i < files->GetNumFiles(); i++ ) {
 			commonLocal.LocalizeGui( files->GetFile( i ), strTable );
 		}
@@ -2144,8 +2170,8 @@ void Com_LocalizeGuiParmsTest_f( const idCmdArgs &args ) {
 
 	common->SetRefreshOnPrint( true );
 
-	idFile *localizeFile = fileSystem->OpenFileWrite( "gui_parm_localize.csv" ); 
-	idFile *noLocalizeFile = fileSystem->OpenFileWrite( "gui_parm_nolocalize.csv" ); 
+	idFile *localizeFile = fileSystem->OpenFileWrite( "gui_parm_localize.csv" );
+	idFile *noLocalizeFile = fileSystem->OpenFileWrite( "gui_parm_nolocalize.csv" );
 
 	idStrList excludeList;
 	LoadGuiParmExcludeList(excludeList);
@@ -2154,7 +2180,7 @@ void Com_LocalizeGuiParmsTest_f( const idCmdArgs &args ) {
 	GetFileList("z:/d3xp/d3xp/maps/game", "*.map", files);
 
 	for ( int i = 0; i < files.Num(); i++ ) {
-		
+
 		common->Printf("Testing Map '%s'\n", files[i].c_str());
 		idMapFile map;
 
@@ -2179,7 +2205,7 @@ void Com_LocalizeGuiParmsTest_f( const idCmdArgs &args ) {
 			}
 		}
 	}
-	
+
 	fileSystem->CloseFile( localizeFile );
 	fileSystem->CloseFile( noLocalizeFile );
 
@@ -2195,8 +2221,8 @@ void Com_LocalizeMapsTest_f( const idCmdArgs &args ) {
 
 	common->SetRefreshOnPrint( true );
 
-	idFile *localizeFile = fileSystem->OpenFileWrite( "map_localize.csv" ); 
-	
+	idFile *localizeFile = fileSystem->OpenFileWrite( "map_localize.csv" );
+
 	idStrList files;
 	GetFileList("z:/d3xp/d3xp/maps/game", "*.map", files);
 
@@ -2211,7 +2237,7 @@ void Com_LocalizeMapsTest_f( const idCmdArgs &args ) {
 			for ( int j = 0; j < count; j++ ) {
 				idMapEntity *ent = map.GetEntity( j );
 				if ( ent ) {
-					
+
 					//Temp code to get a list of all entity key value pairs
 					/*idStr classname = ent->epairs.GetString("classname");
 					if(classname == "worldspawn" || classname == "func_static" || classname == "light" || classname == "speaker" || classname.Left(8) == "trigger_") {
@@ -2224,7 +2250,7 @@ void Com_LocalizeMapsTest_f( const idCmdArgs &args ) {
 					}*/
 
 					idStr classname = ent->epairs.GetString("classname");
-					
+
 					//Hack: for info_location
 					bool hasLocation = false;
 
@@ -2235,13 +2261,13 @@ void Com_LocalizeMapsTest_f( const idCmdArgs &args ) {
 						for(int k = 0; k < list->Num(); k++) {
 
 							idStr val = ent->epairs.GetString((*list)[k], "");
-							
+
 							if(classname == "info_location" && (*list)[k] == "location") {
 								hasLocation = true;
 							}
 
 							if(val.Length() && TestMapVal(val)) {
-								
+
 								if(!hasLocation || (*list)[k] == "location") {
 									idStr out = va("%s,%s,%s\r\n", val.c_str(), (*list)[k].c_str(), file.c_str());
 									localizeFile->Write( out.c_str(), out.Length() );
@@ -2443,7 +2469,7 @@ void idCommonLocal::Frame( void ) {
 		Sys_GenerateEvents();
 
 		// write config file if anything changed
-		WriteConfiguration(); 
+		WriteConfiguration();
 
 		// change SIMD implementation if required
 		if ( com_forceGenericSIMD.IsModified() ) {
@@ -2477,7 +2503,7 @@ void idCommonLocal::Frame( void ) {
 			Printf( "frame:%i all:%3i gfr:%3i rf:%3i bk:%3i\n", com_frameNumber, com_frameMsec, time_gameFrame, time_frontend, time_backend );
 			time_gameFrame = 0;
 			time_gameDraw = 0;
-		}	
+		}
 
 		com_frameNumber++;
 
@@ -2509,7 +2535,7 @@ void idCommonLocal::GUIFrame( bool execCmd, bool network ) {
 		idAsyncNetwork::RunFrame();
 	}
 	session->Frame();
-	session->UpdateScreen( false );	
+	session->UpdateScreen( false );
 }
 
 /*
@@ -2650,7 +2676,7 @@ void idCommonLocal::LoadGameDLL( void ) {
 	GetGameAPI = (GetGameAPI_t) Sys_DLL_GetProcAddress( gameDLL, "GetGameAPI" );
 	if ( !GetGameAPI ) {
 		Sys_DLL_Unload( gameDLL );
-		gameDLL = NULL;
+		gameDLL = 0;
 		common->FatalError( "couldn't find game DLL API" );
 		return;
 	}
@@ -2674,7 +2700,7 @@ void idCommonLocal::LoadGameDLL( void ) {
 
 	if ( gameExport.version != GAME_API_VERSION ) {
 		Sys_DLL_Unload( gameDLL );
-		gameDLL = NULL;
+		gameDLL = 0;
 		common->FatalError( "wrong game DLL API version" );
 		return;
 	}
@@ -2706,7 +2732,7 @@ void idCommonLocal::UnloadGameDLL( void ) {
 
 	if ( gameDLL ) {
 		Sys_DLL_Unload( gameDLL );
-		gameDLL = NULL;
+		gameDLL = 0;
 	}
 	game = NULL;
 	gameEdit = NULL;
@@ -2729,8 +2755,6 @@ idCommonLocal::SetMachineSpec
 =================
 */
 void idCommonLocal::SetMachineSpec( void ) {
-	cpuid_t	cpu = Sys_GetProcessorId();
-	double ghz = Sys_ClockTicksPerSecond() * 0.000000001f;
 	int vidRam = Sys_GetVideoRam();
 	int sysRam = Sys_GetSystemRam();
 	bool oldCard = false;
@@ -2738,15 +2762,18 @@ void idCommonLocal::SetMachineSpec( void ) {
 
 	renderSystem->GetCardCaps( oldCard, nv10or20 );
 
-	Printf( "Detected\n \t%.2f GHz CPU\n\t%i MB of System memory\n\t%i MB of Video memory on %s\n\n", ghz, sysRam, vidRam, ( oldCard ) ? "a less than optimal video architecture" : "an optimal video architecture" );
+	if (oldCard)
+		Printf( "Detected\n\t%i MB of System memory\n\t%i MB of Video memory on a less than optimal video architecture\n\n", sysRam, vidRam );
+	else
+		Printf( "Detected\n\t%i MB of System memory\n\t%i MB of Video memory on an optimal video architecture\n\n", sysRam, vidRam );
 
-	if ( ghz >= 2.75f && vidRam >= 512 && sysRam >= 1024 && !oldCard ) {
+	if ( vidRam >= 512 && sysRam >= 1024 && !oldCard ) {
 		Printf( "This system qualifies for Ultra quality!\n" );
 		com_machineSpec.SetInteger( 3 );
-	} else if ( ghz >= ( ( cpu & CPUID_AMD ) ? 1.9f : 2.19f ) && vidRam >= 256 && sysRam >= 512 && !oldCard ) {
+	} else if ( vidRam >= 256 && sysRam >= 512 && !oldCard ) {
 		Printf( "This system qualifies for High quality!\n" );
 		com_machineSpec.SetInteger( 2 );
-	} else if ( ghz >= ( ( cpu & CPUID_AMD ) ? 1.1f : 1.25f ) && vidRam >= 128 && sysRam >= 384 ) {
+	} else if ( vidRam >= 128 && sysRam >= 384 ) {
 		Printf( "This system qualifies for Medium quality.\n" );
 		com_machineSpec.SetInteger( 1 );
 	} else {
@@ -2756,12 +2783,30 @@ void idCommonLocal::SetMachineSpec( void ) {
 	com_videoRam.SetInteger( vidRam );
 }
 
+static unsigned int AsyncTimer(unsigned int interval, void *) {
+	common->Async();
+	Sys_TriggerEvent(TRIGGER_EVENT_ONE);
+
+	// calculate the next interval to get as close to 60fps as possible
+	unsigned int now = SDL_GetTicks();
+	unsigned int tick = com_ticNumber * USERCMD_MSEC;
+
+	if (now >= tick)
+		return 1;
+
+	return tick - now;
+}
+
 /*
 =================
 idCommonLocal::Init
 =================
 */
-void idCommonLocal::Init( int argc, const char **argv, const char *cmdline ) {
+void idCommonLocal::Init( int argc, char **argv ) {
+	SDL_Init(SDL_INIT_TIMER);
+
+	Sys_InitThreads();
+
 	try {
 
 		// set interface pointers used by idLib
@@ -2775,14 +2820,8 @@ void idCommonLocal::Init( int argc, const char **argv, const char *cmdline ) {
 
 		// clear warning buffer
 		ClearWarnings( GAME_NAME " initialization" );
-		
+
 		// parse command line options
-		idCmdArgs args;
-		if ( cmdline ) {
-			// tokenize if the OS doesn't do it for us
-			args.TokenizeString( cmdline, true );
-			argv = args.GetArgs( &argc );
-		}
 		ParseCommandLine( argc, argv );
 
 		// init console command system
@@ -2853,7 +2892,7 @@ void idCommonLocal::Init( int argc, const char **argv, const char *cmdline ) {
 
 		// remove any prints from the notify lines
 		console->ClearNotifyLines();
-		
+
 		ClearCommandLine();
 
 		com_fullyInitialized = true;
@@ -2862,6 +2901,11 @@ void idCommonLocal::Init( int argc, const char **argv, const char *cmdline ) {
 	catch( idException & ) {
 		Sys_Error( "Error during initialization" );
 	}
+
+	async_timer = SDL_AddTimer(USERCMD_MSEC, AsyncTimer, NULL);
+
+	if (!async_timer)
+		Sys_Error("Error while starting the async timer");
 }
 
 
@@ -2871,8 +2915,12 @@ idCommonLocal::Shutdown
 =================
 */
 void idCommonLocal::Shutdown( void ) {
-
 	com_shuttingDown = true;
+
+	if (async_timer) {
+		SDL_RemoveTimer(async_timer);
+		async_timer = NULL;
+	}
 
 	idAsyncNetwork::server.Kill();
 	idAsyncNetwork::client.Shutdown();
@@ -2913,6 +2961,8 @@ void idCommonLocal::Shutdown( void ) {
 
 	// shutdown idLib
 	idLib::ShutDown();
+
+	Sys_ShutdownThreads();
 }
 
 /*
@@ -2938,7 +2988,7 @@ void idCommonLocal::InitGame( void ) {
 		file = fileSystem->OpenFileWrite( CONFIG_SPEC );
 		fileSystem->CloseFile( file );
 	}
-	
+
 	idCmdArgs args;
 	if ( sysDetect ) {
 		SetMachineSpec();
@@ -3025,7 +3075,7 @@ void idCommonLocal::InitGame( void ) {
 
 	// load the game dll
 	LoadGameDLL();
-	
+
 	PrintLoadingMessage( common->GetLanguageDict()->GetString( "#str_04351" ) );
 
 	// init the session
@@ -3033,7 +3083,7 @@ void idCommonLocal::InitGame( void ) {
 
 	// have to do this twice.. first one sets the correct r_mode for the renderer init
 	// this time around the backend is all setup correct.. a bit fugly but do not want
-	// to mess with all the gl init at this point.. an old vid card will never qualify for 
+	// to mess with all the gl init at this point.. an old vid card will never qualify for
 	if ( sysDetect ) {
 		SetMachineSpec();
 		Com_ExecMachineSpec_f( args );
@@ -3055,7 +3105,6 @@ void idCommonLocal::ShutdownGame( bool reloading ) {
 	if ( sw ) {
 		sw->StopAllSounds();
 	}
-	soundSystem->ClearBuffer();
 
 	// shutdown the script debugger
 	// DebuggerServerShutdown();

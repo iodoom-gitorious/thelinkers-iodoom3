@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -29,7 +29,6 @@ If you have questions concerning this license or the applicable additional terms
 #ifndef __LIB_H__
 #define __LIB_H__
 
-
 /*
 ===============================================================================
 
@@ -47,6 +46,11 @@ If you have questions concerning this license or the applicable additional terms
 ===============================================================================
 */
 
+class idSys;
+class idCommon;
+class idCVarSystem;
+class idFileSystem;
+
 class idLib {
 public:
 	static class idSys *		sys;
@@ -58,7 +62,7 @@ public:
 	static void					Init( void );
 	static void					ShutDown( void );
 
-	// wrapper to idCommon functions 
+	// wrapper to idCommon functions
 	static void					Error( const char *fmt, ... );
 	static void					Warning( const char *fmt, ... );
 };
@@ -72,32 +76,9 @@ public:
 ===============================================================================
 */
 
-typedef unsigned char			byte;		// 8 bits
-typedef unsigned short			word;		// 16 bits
-typedef unsigned int			dword;		// 32 bits
-typedef unsigned int			uint;
-typedef unsigned long			ulong;
-
-typedef int						qhandle_t;
-
 class idFile;
 class idVec3;
 class idVec4;
-
-#ifndef NULL
-#define NULL					((void *)0)
-#endif
-
-#ifndef BIT
-#define BIT( num )				( 1 << ( num ) )
-#endif
-
-#define	MAX_STRING_CHARS		1024		// max length of a string
-
-// maximum world size
-#define MAX_WORLD_COORD			( 128 * 1024 )
-#define MIN_WORLD_COORD			( -128 * 1024 )
-#define MAX_WORLD_SIZE			( MAX_WORLD_COORD - MIN_WORLD_COORD )
 
 // basic colors
 extern	idVec4 colorBlack;
@@ -157,88 +138,5 @@ public:
 // move from Math.h to keep gcc happy
 template<class T> ID_INLINE T	Max( T x, T y ) { return ( x > y ) ? x : y; }
 template<class T> ID_INLINE T	Min( T x, T y ) { return ( x < y ) ? x : y; }
-
-/*
-===============================================================================
-
-	idLib headers.
-
-===============================================================================
-*/
-
-// memory management and arrays
-#include "Heap.h"
-#include "containers/List.h"
-
-// math
-#include "math/Simd.h"
-#include "math/Math.h"
-#include "math/Random.h"
-#include "math/Complex.h"
-#include "math/Vector.h"
-#include "math/Matrix.h"
-#include "math/Angles.h"
-#include "math/Quat.h"
-#include "math/Rotation.h"
-#include "math/Plane.h"
-#include "math/Pluecker.h"
-#include "math/Polynomial.h"
-#include "math/Extrapolate.h"
-#include "math/Interpolate.h"
-#include "math/Curve.h"
-#include "math/Ode.h"
-#include "math/Lcp.h"
-
-// bounding volumes
-#include "bv/Sphere.h"
-#include "bv/Bounds.h"
-#include "bv/Box.h"
-#include "bv/Frustum.h"
-
-// geometry
-#include "geometry/DrawVert.h"
-#include "geometry/JointTransform.h"
-#include "geometry/Winding.h"
-#include "geometry/Winding2D.h"
-#include "geometry/Surface.h"
-#include "geometry/Surface_Patch.h"
-#include "geometry/Surface_Polytope.h"
-#include "geometry/Surface_SweptSpline.h"
-#include "geometry/TraceModel.h"
-
-// text manipulation
-#include "Str.h"
-#include "Token.h"
-#include "Lexer.h"
-#include "Parser.h"
-#include "Base64.h"
-#include "CmdArgs.h"
-
-// containers
-#include "containers/BTree.h"
-#include "containers/BinSearch.h"
-#include "containers/HashIndex.h"
-#include "containers/HashTable.h"
-#include "containers/StaticList.h"
-#include "containers/LinkList.h"
-#include "containers/Hierarchy.h"
-#include "containers/Queue.h"
-#include "containers/Stack.h"
-#include "containers/StrList.h"
-#include "containers/StrPool.h"
-#include "containers/VectorSet.h"
-#include "containers/PlaneSet.h"
-
-// hashing
-#include "hashing/CRC32.h"
-#include "hashing/MD4.h"
-#include "hashing/MD5.h"
-
-// misc
-#include "Dict.h"
-#include "LangDict.h"
-#include "BitMsg.h"
-#include "MapFile.h"
-#include "Timer.h"
 
 #endif	/* !__LIB_H__ */

@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,11 +26,14 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
+#include "physics/Physics_Actor.h"
+#include "Entity.h"
+#include "Player.h"
+#include "Moveable.h"
+#include "Game_local.h"
 
-#include "../Game_local.h"
-
+#include "physics/Push.h"
 
 /*
 ============
@@ -800,9 +803,6 @@ int idPush::TryRotatePushEntity( trace_t &results, idEntity *check, idClipModel 
 	SaveEntityPosition( check );
 
 	newRotation.Set( rotation.GetOrigin(), rotation.GetVec(), checkAngle );
-	// NOTE:	this code prevents msvc 6.0 & 7.0 from screwing up the above code in
-	//			release builds moving less floats than it should
-	static float shit = checkAngle;
 
 	newRotation.RotatePoint( rotationPoint );
 
@@ -1394,7 +1394,7 @@ float idPush::ClipPush( trace_t &results, idEntity *pusher, const int flags,
 	idRotation rotation;
 	float mass;
 
-    mass = 0.0f;
+	mass = 0.0f;
 
 	results.fraction = 1.0f;
 	results.endpos = newOrigin;

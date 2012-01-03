@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -28,6 +28,11 @@ If you have questions concerning this license or the applicable additional terms
 
 #ifndef __SOUND__
 #define __SOUND__
+
+#include "idlib/math/Vector.h"
+#include "framework/DeclManager.h"
+#include "framework/DemoFile.h"
+#include "renderer/Cinematic.h"
 
 /*
 ===============================================================================
@@ -241,8 +246,8 @@ public:
 	// under the assumption that we are rendering out screenshots and the gameTime is going
 	// much slower than real time.
 	// path should not include an extension, and the generated filenames will be:
-	// <path>_left.raw, <path>_right.raw, or <path>_51left.raw, <path>_51right.raw, 
-	// <path>_51center.raw, <path>_51lfe.raw, <path>_51backleft.raw, <path>_51backright.raw, 
+	// <path>_left.raw, <path>_right.raw, or <path>_51left.raw, <path>_51right.raw,
+	// <path>_51center.raw, <path>_51lfe.raw, <path>_51backleft.raw, <path>_51backright.raw,
 	// If only two channel mixing is enabled, the left and right .raw files will also be
 	// combined into a stereo .wav file.
 	virtual void			AVIOpen( const char *path, const char *name ) = 0;
@@ -289,11 +294,6 @@ public:
 
 	// shutdown routine
 	virtual	void			Shutdown( void ) = 0;
-
-	// call ClearBuffer if there is a chance that the AsyncUpdate won't get called
-	// for 20+ msec, which would cause a stuttering repeat of the current
-	// buffer contents
-	virtual void			ClearBuffer( void ) = 0;
 
 	// sound is attached to the window, and must be recreated when the window is changed
 	virtual bool			InitHW( void ) = 0;

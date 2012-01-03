@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -25,8 +25,6 @@ If you have questions concerning this license or the applicable additional terms
 
 ===========================================================================
 */
-#include "../../idlib/precompiled.h"
-#include "../sys_local.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -36,13 +34,18 @@ If you have questions concerning this license or the applicable additional terms
 #include <sys/mman.h>
 #include <sys/time.h>
 #include <pwd.h>
-#include <pthread.h>
 #include <dlfcn.h>
 #include <termios.h>
 #include <signal.h>
 #include <fcntl.h>
 
-#include "posix_public.h"
+#include "sys/platform.h"
+#include "idlib/containers/StrList.h"
+#include "framework/KeyInput.h"
+#include "framework/EditField.h"
+#include "sys/sys_local.h"
+
+#include "sys/posix/posix_public.h"
 
 #define					MAX_OSPATH 256
 #define					COMMAND_HISTORY 64
@@ -86,9 +89,7 @@ void Posix_Exit(int ret) {
 	}
 	// at this point, too late to catch signals
 	Posix_ClearSigs();
-	if ( asyncThread.threadHandle ) {
-		Sys_DestroyThread( asyncThread );
-	}
+
 	// process spawning. it's best when it happens after everything has shut down
 	if ( exit_spawn[0] ) {
 		Sys_DoStartProcess( exit_spawn, false );
@@ -152,37 +153,6 @@ void Sys_Quit(void) {
 
 /*
 ================
-Sys_Milliseconds
-================
-*/
-/* base time in seconds, that's our origin
-   timeval:tv_sec is an int: 
-   assuming this wraps every 0x7fffffff - ~68 years since the Epoch (1970) - we're safe till 2038
-   using unsigned long data type to work right with Sys_XTimeToSysTime */
-unsigned long sys_timeBase = 0;
-/* current time in ms, using sys_timeBase as origin
-   NOTE: sys_timeBase*1000 + curtime -> ms since the Epoch
-     0x7fffffff ms - ~24 days
-		 or is it 48 days? the specs say int, but maybe it's casted from unsigned int?
-*/
-int Sys_Milliseconds( void ) {
-	int curtime;
-	struct timeval tp;
-
-	gettimeofday(&tp, NULL);
-
-	if (!sys_timeBase) {
-		sys_timeBase = tp.tv_sec;
-		return tp.tv_usec / 1000;
-	}
-
-	curtime = (tp.tv_sec - sys_timeBase) * 1000 + tp.tv_usec / 1000;
-
-	return curtime;
-}
-
-/*
-================
 Sys_Mkdir
 ================
 */
@@ -202,20 +172,20 @@ int Sys_ListFiles( const char *directory, const char *extension, idStrList &list
 	char search[MAX_OSPATH];
 	struct stat st;
 	bool debug;
-	
+
 	list.Clear();
 
 	debug = cvarSystem->GetCVarBool( "fs_debug" );
-	
+
 	if (!extension)
 		extension = "";
-	
+
 	// passing a slash as extension will find directories
 	if (extension[0] == '/' && extension[1] == 0) {
 		extension = "";
 		dironly = true;
 	}
-	
+
 	// search
 	// NOTE: case sensitivity of directory path can screw us up here
 	if ((fdir = opendir(directory)) == NULL) {
@@ -224,7 +194,7 @@ int Sys_ListFiles( const char *directory, const char *extension, idStrList &list
 		}
 		return -1;
 	}
-	
+
 	while ((d = readdir(fdir)) != NULL) {
 		idStr::snPrintf(search, sizeof(search), "%s/%s", directory, d->d_name);
 		if (stat(search, &st) == -1)
@@ -245,11 +215,11 @@ int Sys_ListFiles( const char *directory, const char *extension, idStrList &list
 	}
 
 	closedir(fdir);
-	
+
 	if ( debug ) {
 		common->Printf( "Sys_ListFiles: %d entries in %s\n", list.Num(), directory );
 	}
-	
+
 	return list.Num();
 }
 
@@ -337,8 +307,10 @@ Posix_Cwd
 const char *Posix_Cwd( void ) {
 	static char cwd[MAX_OSPATH];
 
-	getcwd( cwd, sizeof( cwd ) - 1 );
-	cwd[MAX_OSPATH-1] = 0;
+	if (getcwd( cwd, sizeof( cwd ) - 1 ))
+		cwd[MAX_OSPATH-1] = 0;
+	else
+		cwd[0] = 0;
 
 	return cwd;
 }
@@ -385,12 +357,12 @@ Sys_DLL_Load
 TODO: OSX - use the native API instead? NSModule
 =================
 */
-int Sys_DLL_Load( const char *path ) {
+uintptr_t Sys_DLL_Load( const char *path ) {
 	void *handle = dlopen( path, RTLD_NOW );
 	if ( !handle ) {
 		Sys_Printf( "dlopen '%s' failed: %s\n", path, dlerror() );
 	}
-	return (int)handle;
+	return (uintptr_t)handle;
 }
 
 /*
@@ -398,7 +370,7 @@ int Sys_DLL_Load( const char *path ) {
 Sys_DLL_GetProcAddress
 =================
 */
-void* Sys_DLL_GetProcAddress( int handle, const char *sym ) {
+void* Sys_DLL_GetProcAddress( uintptr_t handle, const char *sym ) {
 	const char *error;
 	void *ret = dlsym( (void *)handle, sym );
 	if ((error = dlerror()) != NULL)  {
@@ -412,7 +384,7 @@ void* Sys_DLL_GetProcAddress( int handle, const char *sym ) {
 Sys_DLL_Unload
 =================
 */
-void Sys_DLL_Unload( int handle ) {
+void Sys_DLL_Unload( uintptr_t handle ) {
 	dlclose( (void *)handle );
 }
 
@@ -430,26 +402,10 @@ const char *Sys_DefaultCDPath( void ) {
 	return "";
 }
 
-long Sys_FileTimeStamp(FILE * fp) {
+ID_TIME_T Sys_FileTimeStamp(FILE * fp) {
 	struct stat st;
 	fstat(fileno(fp), &st);
 	return st.st_mtime;
-}
-
-void Sys_Sleep(int msec) {
-	if ( msec < 20 ) {
-		static int last = 0;
-		int now = Sys_Milliseconds();
-		if ( now - last > 1000 ) {
-			Sys_Printf("WARNING: Sys_Sleep - %d < 20 msec is not portable\n", msec);
-			last = now;
-		}
-		// ignore that sleep call, keep going
-		return;
-	}
-	// use nanosleep? keep sleeping if signal interrupt?
-	if (usleep(msec * 1000) == -1)
-		Sys_Printf("usleep: %s\n", strerror(errno));
 }
 
 char *Sys_GetClipboardData(void) {
@@ -460,7 +416,7 @@ char *Sys_GetClipboardData(void) {
 void Sys_SetClipboardData( const char *string ) {
 	Sys_Printf( "TODO: Sys_SetClipboardData\n" );
 }
-	
+
 
 // stub pretty much everywhere - heavy calling
 void Sys_FlushCacheMemory(void *base, int bytes)
@@ -470,9 +426,6 @@ void Sys_FlushCacheMemory(void *base, int bytes)
 
 bool Sys_FPU_StackIsEmpty( void ) {
 	return true;
-}
-
-void Sys_FPU_ClearStack( void ) {
 }
 
 const char *Sys_FPU_GetState( void ) {
@@ -536,12 +489,8 @@ Posix_EarlyInit
 ===============
 */
 void Posix_EarlyInit( void ) {
-	memset( &asyncThread, 0, sizeof( asyncThread ) );
 	exit_spawn[0] = '\0';
 	Posix_InitSigs();
-	// set the base time
-	Sys_Milliseconds();
-	Posix_InitPThreads();
 }
 
 /*
@@ -557,7 +506,6 @@ void Posix_LateInit( void ) {
 #ifndef ID_DEDICATED
 	common->Printf( "%d MB Video Memory\n", Sys_GetVideoRam() );
 #endif
-	Posix_StartAsyncThread( );
 }
 
 /*
@@ -589,11 +537,11 @@ void Posix_InitConsoleInput( void ) {
 		/*
 		  ECHO: don't echo input characters
 		  ICANON: enable canonical mode.  This  enables  the  special
-		  	characters  EOF,  EOL,  EOL2, ERASE, KILL, REPRINT,
-		  	STATUS, and WERASE, and buffers by lines.
+			characters  EOF,  EOL,  EOL2, ERASE, KILL, REPRINT,
+			STATUS, and WERASE, and buffers by lines.
 		  ISIG: when any of the characters  INTR,  QUIT,  SUSP,  or
-		  	DSUSP are received, generate the corresponding signal
-		*/              
+			DSUSP are received, generate the corresponding signal
+		*/
 		tc.c_lflag &= ~(ECHO | ICANON);
 		/*
 		  ISTRIP strip off bit 8
@@ -633,24 +581,19 @@ terminal support utilities
 */
 
 void tty_Del() {
-	char key;
-	key = '\b';
-	write( STDOUT_FILENO, &key, 1 );
-	key = ' ';
-	write( STDOUT_FILENO, &key, 1 );
-	key = '\b';
-	write( STDOUT_FILENO, &key, 1 );
+	putchar('\b');
+	putchar(' ');
+	putchar('\b');
 }
 
 void tty_Left() {
-	char key = '\b';
-	write( STDOUT_FILENO, &key, 1 );
+	putchar('\b');
 }
 
 void tty_Right() {
-	char key = 27;
-	write( STDOUT_FILENO, &key, 1 );
-	write( STDOUT_FILENO, "[C", 2 );
+	putchar(27);
+	putchar('[');
+	putchar('C');
 }
 
 // clear the display of the line currently edited
@@ -688,20 +631,25 @@ void tty_Show() {
 	input_hide--;
 	if ( input_hide == 0 ) {
 		char *buf = input_field.GetBuffer();
-		if ( buf[0] ) {
-			write( STDOUT_FILENO, buf, strlen( buf ) );
-			int back = strlen( buf ) - input_field.GetCursor();
-			while ( back > 0 ) {
-				tty_Left();
-				back--;
-			}
+		size_t len = strlen(buf);
+		if ( len < 1 )
+			return;
+
+		len = write( STDOUT_FILENO, buf, len );
+		if ( len < 1 )
+			return;
+
+		len -= input_field.GetCursor();
+		while ( len > 0 ) {
+			tty_Left();
+			len--;
 		}
 	}
 }
 
 void tty_FlushIn() {
   char key;
-  while ( read(0, &key, 1) != -1 ) {
+  while ( ( key = getchar() ) != EOF ) {
 	  Sys_Printf( "'%d' ", key );
   }
   Sys_Printf( "\n" );
@@ -716,10 +664,9 @@ Return NULL if a complete line is not ready.
 */
 char *Posix_ConsoleInput( void ) {
 	if ( tty_enabled ) {
-		int		ret;
 		char	key;
 		bool	hidden = false;
-		while ( ( ret = read( STDIN_FILENO, &key, 1 ) ) > 0 ) {
+		while ( ( key = getchar() ) != EOF ) {
 			if ( !hidden ) {
 				tty_Hide();
 				hidden = true;
@@ -739,7 +686,7 @@ char *Posix_ConsoleInput( void ) {
 				idStr::Copynz( input_ret, input_field.GetBuffer(), sizeof( input_ret ) );
 				assert( hidden );
 				tty_Show();
-				write( STDOUT_FILENO, &key, 1 );
+				putchar(key);
 				input_field.Clear();
 				if ( history_count < COMMAND_HISTORY ) {
 					history[ history_count ] = input_ret;
@@ -756,8 +703,7 @@ char *Posix_ConsoleInput( void ) {
 				break;
 			case 27: {
 				// enter escape sequence mode
-				ret = read( STDIN_FILENO, &key, 1 );
-				if ( ret <= 0 ) {
+				if ( ( key = getchar() ) == EOF ) {
 					Sys_Printf( "dropping sequence: '27' " );
 					tty_FlushIn();
 					assert( hidden );
@@ -766,8 +712,7 @@ char *Posix_ConsoleInput( void ) {
 				}
 				switch ( key ) {
 				case 79:
-					ret = read( STDIN_FILENO, &key, 1 );
-					if ( ret <= 0 ) {
+					if ( ( key = getchar() ) == EOF ) {
 						Sys_Printf( "dropping sequence: '27' '79' " );
 						tty_FlushIn();
 						assert( hidden );
@@ -792,8 +737,7 @@ char *Posix_ConsoleInput( void ) {
 					}
 					break;
 				case 91: {
-					ret = read( STDIN_FILENO, &key, 1 );
-					if ( ret <= 0 ) {
+					if ( ( key = getchar() ) == EOF ) {
 						Sys_Printf( "dropping sequence: '27' '91' " );
 						tty_FlushIn();
 						assert( hidden );
@@ -802,8 +746,7 @@ char *Posix_ConsoleInput( void ) {
 					}
 					switch ( key ) {
 					case 49: {
-						ret = read( STDIN_FILENO, &key, 1 );
-						if ( ret <= 0 || key != 126 ) {
+						if ( ( key = getchar() ) == EOF  || key != 126 ) {
 							Sys_Printf( "dropping sequence: '27' '91' '49' '%d' ", key );
 							tty_FlushIn();
 							assert( hidden );
@@ -815,8 +758,7 @@ char *Posix_ConsoleInput( void ) {
 						break;
 					}
 					case 50: {
-						ret = read( STDIN_FILENO, &key, 1 );
-						if ( ret <= 0 || key != 126 ) {
+						if ( ( key = getchar() ) == EOF || key != 126 ) {
 							Sys_Printf( "dropping sequence: '27' '91' '50' '%d' ", key );
 							tty_FlushIn();
 							assert( hidden );
@@ -825,11 +767,10 @@ char *Posix_ConsoleInput( void ) {
 						}
 						// all terms
 						input_field.KeyDownEvent( K_INS );
-						break;						
+						break;
 					}
 					case 52: {
-						ret = read( STDIN_FILENO, &key, 1 );
-						if ( ret <= 0 || key != 126 ) {
+						if ( ( key = getchar() ) == EOF || key != 126 ) {
 							Sys_Printf( "dropping sequence: '27' '91' '52' '%d' ", key );
 							tty_FlushIn();
 							assert( hidden );
@@ -841,8 +782,7 @@ char *Posix_ConsoleInput( void ) {
 						break;
 					}
 					case 51: {
-						ret = read( STDIN_FILENO, &key, 1 );
-						if ( ret <= 0 ) {
+						if ( ( key = getchar() ) == EOF ) {
 							Sys_Printf( "dropping sequence: '27' '91' '51' " );
 							tty_FlushIn();
 							assert( hidden );
@@ -857,7 +797,7 @@ char *Posix_ConsoleInput( void ) {
 						tty_FlushIn();
 						assert( hidden );
 						tty_Show();
-						return NULL;						
+						return NULL;
 					}
 					case 65:
 					case 66: {
@@ -883,7 +823,7 @@ char *Posix_ConsoleInput( void ) {
 						int index = -1;
 						if ( history_current == 0 ) {
 							input_field = history_backup;
-						} else {									
+						} else {
 							index = history_start + Min( COMMAND_HISTORY, history_count ) - history_current;
 							index %= COMMAND_HISTORY;
 							assert( index >= 0 && index < COMMAND_HISTORY );
@@ -1044,10 +984,3 @@ void Sys_Error(const char *error, ...) {
 
 	Posix_Exit( EXIT_FAILURE );
 }
-
-/*
-===============
-Sys_FreeOpenAL
-===============
-*/
-void Sys_FreeOpenAL( void ) { }

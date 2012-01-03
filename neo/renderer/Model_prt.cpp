@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,11 +26,10 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
+#include "renderer/tr_local.h"
 
-#include "tr_local.h"
-#include "Model_local.h"
+#include "renderer/Model_local.h"
 
 static const char *parametricParticle_SnapshotName = "_ParametricParticle_Snapshot_";
 
@@ -133,7 +132,6 @@ idRenderModel *idRenderModelPrt::InstantiateDynamicModel( const struct renderEnt
 
 		int stageAge = g.renderView->time + renderEntity->shaderParms[SHADERPARM_TIMEOFFSET] * 1000 - stage->timeOffset * 1000;
 		int	stageCycle = stageAge / stage->cycleMsec;
-		int	inCycleTime = stageAge - stageCycle * stage->cycleMsec;
 
 		// some particles will be in this cycle, some will be in the previous cycle
 		steppingRandom.SetSeed( (( stageCycle << 10 ) & idRandom::MAX_RAND) ^ (int)( renderEntity->shaderParms[SHADERPARM_DIVERSITY] * idRandom::MAX_RAND )  );
@@ -167,7 +165,7 @@ idRenderModel *idRenderModelPrt::InstantiateDynamicModel( const struct renderEnt
 			steppingRandom.RandomInt();
 			steppingRandom2.RandomInt();
 
-			// calculate local age for this index 
+			// calculate local age for this index
 			int	bunchOffset = stage->particleLife * 1000 * stage->spawnBunching * index / stage->totalParticles;
 
 			int particleAge = stageAge - bunchOffset;
@@ -189,7 +187,7 @@ idRenderModel *idRenderModelPrt::InstantiateDynamicModel( const struct renderEnt
 
 			int	inCycleTime = particleAge - particleCycle * stage->cycleMsec;
 
-			if ( renderEntity->shaderParms[SHADERPARM_PARTICLE_STOPTIME] && 
+			if ( renderEntity->shaderParms[SHADERPARM_PARTICLE_STOPTIME] &&
 				g.renderView->time - inCycleTime >= renderEntity->shaderParms[SHADERPARM_PARTICLE_STOPTIME]*1000 ) {
 				// don't fire any more particles
 				continue;

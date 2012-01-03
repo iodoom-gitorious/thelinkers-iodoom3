@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,11 +26,11 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
+#include "framework/Common.h"
+#include "renderer/tr_local.h"
 
-#include "tr_local.h"
-
+#include "renderer/VertexCache.h"
 
 static const int	FRAME_MEMORY_BYTES = 0x200000;
 static const int	EXPAND_HEADERS = 1024;
@@ -121,9 +121,9 @@ void *idVertexCache::Position( vertCache_t *buffer ) {
 	if ( buffer->vbo ) {
 		if ( r_showVertexCache.GetInteger() == 2 ) {
 			if ( buffer->tag == TAG_TEMP ) {
-				common->Printf( "GL_ARRAY_BUFFER_ARB = %i + %i (%i bytes)\n", buffer->vbo, buffer->offset, buffer->size ); 
+				common->Printf( "GL_ARRAY_BUFFER_ARB = %i + %zd (%i bytes)\n", buffer->vbo, buffer->offset, buffer->size );
 			} else {
-				common->Printf( "GL_ARRAY_BUFFER_ARB = %i (%i bytes)\n", buffer->vbo, buffer->size ); 
+				common->Printf( "GL_ARRAY_BUFFER_ARB = %i (%i bytes)\n", buffer->vbo, buffer->size );
 			}
 		}
 		if ( buffer->indexBuffer ) {
@@ -504,10 +504,8 @@ idVertexCache::List
 */
 void idVertexCache::List( void ) {
 	int	numActive = 0;
-	int	numDeferred = 0;
 	int frameStatic = 0;
 	int	totalStatic = 0;
-	int	deferredSpace = 0;
 
 	vertCache_t *block;
 	for ( block = staticHeaders.next ; block != &staticHeaders ; block = block->next) {

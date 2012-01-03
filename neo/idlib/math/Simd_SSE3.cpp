@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,15 +26,9 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
 
-#include "Simd_Generic.h"
-#include "Simd_MMX.h"
-#include "Simd_SSE.h"
-#include "Simd_SSE2.h"
-#include "Simd_SSE3.h"
-
+#include "idlib/math/Simd_SSE3.h"
 
 //===============================================================
 //
@@ -42,7 +36,7 @@ If you have questions concerning this license or the applicable additional terms
 //
 //===============================================================
 
-#if defined(MACOS_X) && defined(__i386__)
+#if defined(__GNUC__) && defined(__SSE3__)
 
 /*
 ============
@@ -53,9 +47,13 @@ const char * idSIMD_SSE3::GetName( void ) const {
 	return "MMX & SSE & SSE2 & SSE3";
 }
 
-#elif defined(_WIN32)
+#elif defined(_MSC_VER)
 
 #include <xmmintrin.h>
+
+#include "idlib/geometry/JointTransform.h"
+#include "idlib/geometry/DrawVert.h"
+#include "idlib/math/Vector.h"
 
 #define SHUFFLEPS( x, y, z, w )		(( (x) & 3 ) << 6 | ( (y) & 3 ) << 4 | ( (z) & 3 ) << 2 | ( (w) & 3 ))
 #define R_SHUFFLEPS( x, y, z, w )	(( (w) & 3 ) << 6 | ( (z) & 3 ) << 4 | ( (y) & 3 ) << 2 | ( (x) & 3 ))
@@ -364,4 +362,4 @@ void VPCALL idSIMD_SSE3::TransformVerts( idDrawVert *verts, const int numVerts, 
 #endif
 }
 
-#endif /* _WIN32 */
+#endif /* _MSC_VER */

@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,8 +26,9 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
+
+#include "idlib/math/Lcp.h"
 
 static idCVar lcp_showFailures( "lcp_showFailures", "0", CVAR_SYSTEM | CVAR_BOOL, "show LCP solver failures" );
 
@@ -578,7 +579,7 @@ bool idLCP_Square::Solve( const idMatX &o_m, idVecX &o_x, const idVecX &o_b, con
 		}
 	}
 
-	// sub matrix for factorization 
+	// sub matrix for factorization
 	clamped.SetData( m.GetNumRows(), m.GetNumColumns(), MATX_ALLOCA( m.GetNumRows() * m.GetNumColumns() ) );
 	diagonal.SetData( m.GetNumRows(), VECX_ALLOCA( m.GetNumRows() ) );
 
@@ -1368,7 +1369,7 @@ bool idLCP_Symmetric::Solve( const idMatX &o_m, idVecX &o_x, const idVecX &o_b, 
 		}
 	}
 
-	// sub matrix for factorization 
+	// sub matrix for factorization
 	clamped.SetData( m.GetNumRows(), m.GetNumColumns(), MATX_ALLOCA( m.GetNumRows() * m.GetNumColumns() ) );
 	diagonal.SetData( m.GetNumRows(), VECX_ALLOCA( m.GetNumRows() ) );
 	solveCache1.SetData( m.GetNumRows(), VECX_ALLOCA( m.GetNumRows() ) );

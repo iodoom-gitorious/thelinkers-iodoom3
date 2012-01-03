@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,10 +26,10 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
+#include "framework/Common.h"
 
-#include "AAS_local.h"
+#include "ai/AAS_local.h"
 
 #define SUBSAMPLE_WALK_PATH		1
 #define SUBSAMPLE_FLY_PATH		0
@@ -137,7 +137,7 @@ idAASLocal::WalkPathValid
 ============
 */
 bool idAASLocal::WalkPathValid( int areaNum, const idVec3 &origin, int goalAreaNum, const idVec3 &goalOrigin, int travelFlags, idVec3 &endPos, int &endAreaNum ) const {
-	int curAreaNum, lastAreaNum, lastAreas[4], lastAreaIndex;
+	int curAreaNum, lastAreas[4], lastAreaIndex;
 	idPlane pathPlane, frontPlane, farPlane;
 	idReachability *reach;
 	const aasArea_t *area;
@@ -164,7 +164,6 @@ bool idAASLocal::WalkPathValid( int areaNum, const idVec3 &origin, int goalAreaN
 	farPlane.FitThroughPoint( goalOrigin );
 
 	curAreaNum = areaNum;
-	lastAreaNum = curAreaNum;
 
 	while ( 1 ) {
 

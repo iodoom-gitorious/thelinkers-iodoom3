@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,22 +26,35 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../precompiled.h"
-#pragma hdrstop
+#if MACOS_X
+#include <stdlib.h>
+#include <unistd.h>			// this is for sleep()
+#include <sys/time.h>
+#include <sys/resource.h>
+#include <mach/mach_time.h>
+#endif
 
-#include "Simd_Generic.h"
-#include "Simd_MMX.h"
-#include "Simd_3DNow.h"
-#include "Simd_SSE.h"
-#include "Simd_SSE2.h"
-#include "Simd_SSE3.h"
-#include "Simd_AltiVec.h"
+#include "sys/platform.h"
+#include "idlib/geometry/DrawVert.h"
+#include "idlib/geometry/JointTransform.h"
+#include "idlib/math/Simd_Generic.h"
+#include "idlib/math/Simd_MMX.h"
+#include "idlib/math/Simd_3DNow.h"
+#include "idlib/math/Simd_SSE.h"
+#include "idlib/math/Simd_SSE2.h"
+#include "idlib/math/Simd_SSE3.h"
+#include "idlib/math/Simd_AltiVec.h"
+#include "idlib/math/Plane.h"
+#include "idlib/bv/Bounds.h"
+#include "idlib/Lib.h"
+#include "framework/Common.h"
+#include "renderer/Model.h"
 
+#include "idlib/math/Simd.h"
 
 idSIMDProcessor	*	processor = NULL;			// pointer to SIMD processor
 idSIMDProcessor *	generic = NULL;				// pointer to generic SIMD implementation
 idSIMDProcessor *	SIMDProcessor = NULL;
-
 
 /*
 ================
@@ -61,7 +74,7 @@ idSIMD::InitProcessor
 ============
 */
 void idSIMD::InitProcessor( const char *module, bool forceGeneric ) {
-	cpuid_t cpuid;
+	int cpuid;
 	idSIMDProcessor *newProcessor;
 
 	cpuid = idLib::sys->GetProcessorId();
@@ -99,14 +112,9 @@ void idSIMD::InitProcessor( const char *module, bool forceGeneric ) {
 		idLib::common->Printf( "%s using %s for SIMD processing\n", module, SIMDProcessor->GetName() );
 	}
 
-	if ( cpuid & CPUID_FTZ ) {
+	if ( cpuid & CPUID_SSE ) {
 		idLib::sys->FPU_SetFTZ( true );
-		idLib::common->Printf( "enabled Flush-To-Zero mode\n" );
-	}
-
-	if ( cpuid & CPUID_DAZ ) {
 		idLib::sys->FPU_SetDAZ( true );
-		idLib::common->Printf( "enabled Denormals-Are-Zero mode\n" );
 	}
 }
 
@@ -141,7 +149,7 @@ idSIMDProcessor *p_simd;
 idSIMDProcessor *p_generic;
 long baseClocks = 0;
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 
 #define TIME_TYPE int
 
@@ -169,126 +177,16 @@ long saved_ebx = 0;
 
 #elif MACOS_X
 
-#include <stdlib.h>
-#include <unistd.h>			// this is for sleep()
-#include <sys/time.h>
-#include <sys/resource.h>
-#include <mach/mach_time.h>
-
 double ticksPerNanosecond;
 
 #define TIME_TYPE uint64_t
 
-#ifdef __MWERKS__ //time_in_millisec is missing
-/*
-
-    .text
-	.align 2
-	.globl _GetTB
-_GetTB:
-
-loop:
-	        mftbu   r4	;  load from TBU
-	        mftb    r5	;  load from TBL
-	        mftbu   r6	;  load from TBU
-	        cmpw    r6, r4	;  see if old == new
-	        bne     loop	;  if not, carry occured, therefore loop
-
-	        stw     r4, 0(r3)
-	        stw     r5, 4(r3)
-
-done:
-	        blr		;  return
-
-*/
-typedef struct {
-	unsigned int hi;
-	unsigned int lo;
-} U64;
-
-
-asm void GetTB(U64 *in)
-{
-	nofralloc			// suppress prolog
-	machine 603			// allows the use of mftb & mftbu functions
-	
-loop:	
-	mftbu	r5			// grab the upper time base register (TBU)
-	mftb	r4			// grab the lower time base register (TBL)
-	mftbu	r6			// grab the upper time base register (TBU) again 
-	
-	cmpw	r6,r5		// see if old TBU == new TBU
-	bne-	loop		// loop if carry occurred (predict branch not taken)
-	
-	stw  	r4,4(r3)	// store TBL in the low 32 bits of the return value
-	stw  	r5,0(r3)	// store TBU in the high 32 bits of the return value
-
-	blr
-}
-
-
-
-
-double TBToDoubleNano( U64 startTime, U64 stopTime, double ticksPerNanosecond );
-
-#if __MWERKS__
-asm void GetTB( U64 * );
-#else
-void GetTB( U64 * );
-#endif
-
-double TBToDoubleNano( U64 startTime, U64 stopTime, double ticksPerNanosecond ) {
-	#define K_2POWER32 4294967296.0
-	#define TICKS_PER_NANOSECOND 0.025
-	double nanoTime;
-	U64 diffTime;
-
-	// calc the difference in TB ticks
-	diffTime.hi = stopTime.hi - startTime.hi;
-	diffTime.lo = stopTime.lo - startTime.lo;
-
-	// convert TB ticks into time
-	nanoTime = (double)(diffTime.hi)*((double)K_2POWER32) + (double)(diffTime.lo);
-	nanoTime = nanoTime/ticksPerNanosecond;
-	return (nanoTime);
-}       
-
-TIME_TYPE time_in_millisec( void ) {
-	#define K_2POWER32 4294967296.0
-	#define TICKS_PER_NANOSECOND 0.025
-
-	U64 the_time;
-	double nanoTime, milliTime;
-
-	GetTB( &the_time );
-
-	// convert TB ticks into time
-	nanoTime = (double)(the_time.hi)*((double)K_2POWER32) + (double)(the_time.lo);
-	nanoTime = nanoTime/ticksPerNanosecond;
-
-	// nanoseconds are 1 billionth of a second. I want milliseconds
-	milliTime = nanoTime * 1000000.0;
-
-	printf( "ticks per nanosec -- %lf\n", ticksPerNanosecond );
-	printf( "nanoTime is %lf -- milliTime is %lf -- as int is %i\n", nanoTime, milliTime, (int)milliTime );
-
-	return (int)milliTime;
-}
-
 #define StartRecordTime( start )			\
-	start = time_in_millisec(); 
-
-#define StopRecordTime( end )				\
-	end = time_in_millisec();
-
-
-#else
-#define StartRecordTime( start )			\
-	start = mach_absolute_time(); 
+	start = mach_absolute_time();
 
 #define StopRecordTime( end )				\
 	end = mach_absolute_time();
-#endif
+
 #else
 
 #define TIME_TYPE int
@@ -312,7 +210,7 @@ TIME_TYPE time_in_millisec( void ) {
 PrintClocks
 ============
 */
-void PrintClocks( char *string, int dataCount, int clocks, int otherClocks = 0 ) {
+void PrintClocks( const char *string, int dataCount, int clocks, int otherClocks = 0 ) {
 	int i;
 
 	idLib::common->Printf( string );
@@ -3104,8 +3002,8 @@ void TestNormalizeTangents( void ) {
 		if ( !drawVerts1[i].tangents[1].Compare( drawVerts2[i].tangents[1], 1e-2f ) ) {
 			break;
 		}
-		
-		// since we're doing a lot of unaligned work, added this check to 
+
+		// since we're doing a lot of unaligned work, added this check to
 		// make sure xyz wasn't getting overwritten
 		if ( !drawVerts1[i].xyz.Compare( drawVerts2[i].xyz, 1e-2f ) ) {
 			break;
@@ -3124,8 +3022,6 @@ void TestGetTextureSpaceLightVectors( void ) {
 	int i, j;
 	TIME_TYPE start, end, bestClocksGeneric, bestClocksSIMD;
 	ALIGN16( idDrawVert drawVerts[COUNT] );
-	ALIGN16( idVec4 texCoords1[COUNT] );
-	ALIGN16( idVec4 texCoords2[COUNT] );
 	ALIGN16( int indexes[COUNT*3] );
 	ALIGN16( idVec3 lightVectors1[COUNT] );
 	ALIGN16( idVec3 lightVectors2[COUNT] );
@@ -3191,8 +3087,6 @@ void TestGetSpecularTextureCoords( void ) {
 	ALIGN16( idVec4 texCoords1[COUNT] );
 	ALIGN16( idVec4 texCoords2[COUNT] );
 	ALIGN16( int indexes[COUNT*3] );
-	ALIGN16( idVec3 lightVectors1[COUNT] );
-	ALIGN16( idVec3 lightVectors2[COUNT] );
 	idVec3 lightOrigin, viewOrigin;
 	const char *result;
 
@@ -4049,7 +3943,7 @@ void TestNegate( void ) {
 	ALIGN16( float fsrc0[COUNT] );
 	ALIGN16( float fsrc1[COUNT] );
 	ALIGN16( float fsrc2[COUNT] );
-	
+
 	const char *result;
 
 	idRandom srnd( RANDOM_SEED );
@@ -4063,9 +3957,9 @@ void TestNegate( void ) {
 
 	bestClocksGeneric = 0;
 	for ( i = 0; i < NUMTESTS; i++ ) {
-	
+
 		memcpy( &fsrc1[0], &fsrc0[0], COUNT * sizeof(float) );
-	
+
 		StartRecordTime( start );
 		p_generic->Negate16( fsrc1, COUNT );
 		StopRecordTime( end );
@@ -4075,9 +3969,9 @@ void TestNegate( void ) {
 
 	bestClocksSIMD = 0;
 	for ( i = 0; i < NUMTESTS; i++ ) {
-	
+
 		memcpy( &fsrc2[0], &fsrc0[0], COUNT * sizeof(float) );
-	
+
 		StartRecordTime( start );
 		p_simd->Negate16( fsrc2, COUNT );
 		StopRecordTime( end );
@@ -4109,7 +4003,7 @@ void idSIMD::Test_f( const idCmdArgs &args ) {
 	p_generic = generic;
 
 	if ( idStr::Length( args.Argv( 1 ) ) != 0 ) {
-		cpuid_t cpuid = idLib::sys->GetProcessorId();
+		int cpuid = idLib::sys->GetProcessorId();
 		idStr argString = args.Args();
 
 		argString.Replace( " ", "" );

@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,10 +26,14 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
 
-#include "tr_local.h"
+#include <jpeglib.h>
+#include <jerror.h>
+
+#include "renderer/tr_local.h"
+
+#include "renderer/Image.h"
 
 /*
 
@@ -48,8 +52,6 @@ void R_LoadImage( const char *name, byte **pic, int *width, int *height, bool ma
  */
 
 extern "C" {
-#include "jpeg-6/jpeglib.h"
-
 	// hooks from jpeg lib to our system
 
 	void jpg_Error( const char *fmt, ... ) {
@@ -174,19 +176,19 @@ PCX files are used for 8 bit images
 */
 
 typedef struct {
-    char	manufacturer;
-    char	version;
-    char	encoding;
-    char	bits_per_pixel;
-    unsigned short	xmin,ymin,xmax,ymax;
-    unsigned short	hres,vres;
-    unsigned char	palette[48];
-    char	reserved;
-    char	color_planes;
-    unsigned short	bytes_per_line;
-    unsigned short	palette_type;
-    char	filler[58];
-    unsigned char	data;			// unbounded
+	char	manufacturer;
+	char	version;
+	char	encoding;
+	char	bits_per_pixel;
+	unsigned short	xmin,ymin,xmax,ymax;
+	unsigned short	hres,vres;
+	unsigned char	palette[48];
+	char	reserved;
+	char	color_planes;
+	unsigned short	bytes_per_line;
+	unsigned short	palette_type;
+	char	filler[58];
+	unsigned char	data;			// unbounded
 } pcx_t;
 
 
@@ -199,7 +201,7 @@ TGA files are used for 24/32 bit images
 */
 
 typedef struct _TargaHeader {
-	unsigned char 	id_length, colormap_type, image_type;
+	unsigned char	id_length, colormap_type, image_type;
 	unsigned short	colormap_index, colormap_length;
 	unsigned char	colormap_size;
 	unsigned short	x_origin, y_origin, width, height;
@@ -218,20 +220,20 @@ BMP LOADING
 typedef struct
 {
 	char id[2];
-	unsigned long fileSize;
-	unsigned long reserved0;
-	unsigned long bitmapDataOffset;
-	unsigned long bitmapHeaderSize;
-	unsigned long width;
-	unsigned long height;
+	unsigned int fileSize;
+	unsigned int reserved0;
+	unsigned int bitmapDataOffset;
+	unsigned int bitmapHeaderSize;
+	unsigned int width;
+	unsigned int height;
 	unsigned short planes;
 	unsigned short bitsPerPixel;
-	unsigned long compression;
-	unsigned long bitmapDataSize;
-	unsigned long hRes;
-	unsigned long vRes;
-	unsigned long colors;
-	unsigned long importantColors;
+	unsigned int compression;
+	unsigned int bitmapDataSize;
+	unsigned int hRes;
+	unsigned int vRes;
+	unsigned int colors;
+	unsigned int importantColors;
 	unsigned char palette[256][4];
 } BMPHeader_t;
 
@@ -270,33 +272,33 @@ static void LoadBMP( const char *name, byte **pic, int *width, int *height, ID_T
 
 	bmpHeader.id[0] = *buf_p++;
 	bmpHeader.id[1] = *buf_p++;
-	bmpHeader.fileSize = LittleLong( * ( long * ) buf_p );
+	bmpHeader.fileSize = LittleLong( * ( int * ) buf_p );
 	buf_p += 4;
-	bmpHeader.reserved0 = LittleLong( * ( long * ) buf_p );
+	bmpHeader.reserved0 = LittleLong( * ( int * ) buf_p );
 	buf_p += 4;
-	bmpHeader.bitmapDataOffset = LittleLong( * ( long * ) buf_p );
+	bmpHeader.bitmapDataOffset = LittleLong( * ( int * ) buf_p );
 	buf_p += 4;
-	bmpHeader.bitmapHeaderSize = LittleLong( * ( long * ) buf_p );
+	bmpHeader.bitmapHeaderSize = LittleLong( * ( int * ) buf_p );
 	buf_p += 4;
-	bmpHeader.width = LittleLong( * ( long * ) buf_p );
+	bmpHeader.width = LittleLong( * ( int * ) buf_p );
 	buf_p += 4;
-	bmpHeader.height = LittleLong( * ( long * ) buf_p );
+	bmpHeader.height = LittleLong( * ( int * ) buf_p );
 	buf_p += 4;
 	bmpHeader.planes = LittleShort( * ( short * ) buf_p );
 	buf_p += 2;
 	bmpHeader.bitsPerPixel = LittleShort( * ( short * ) buf_p );
 	buf_p += 2;
-	bmpHeader.compression = LittleLong( * ( long * ) buf_p );
+	bmpHeader.compression = LittleLong( * ( int * ) buf_p );
 	buf_p += 4;
-	bmpHeader.bitmapDataSize = LittleLong( * ( long * ) buf_p );
+	bmpHeader.bitmapDataSize = LittleLong( * ( int * ) buf_p );
 	buf_p += 4;
-	bmpHeader.hRes = LittleLong( * ( long * ) buf_p );
+	bmpHeader.hRes = LittleLong( * ( int * ) buf_p );
 	buf_p += 4;
-	bmpHeader.vRes = LittleLong( * ( long * ) buf_p );
+	bmpHeader.vRes = LittleLong( * ( int * ) buf_p );
 	buf_p += 4;
-	bmpHeader.colors = LittleLong( * ( long * ) buf_p );
+	bmpHeader.colors = LittleLong( * ( int * ) buf_p );
 	buf_p += 4;
-	bmpHeader.importantColors = LittleLong( * ( long * ) buf_p );
+	bmpHeader.importantColors = LittleLong( * ( int * ) buf_p );
 	buf_p += 4;
 
 	memcpy( bmpHeader.palette, buf_p, sizeof( bmpHeader.palette ) );
@@ -304,13 +306,13 @@ static void LoadBMP( const char *name, byte **pic, int *width, int *height, ID_T
 	if ( bmpHeader.bitsPerPixel == 8 )
 		buf_p += 1024;
 
-	if ( bmpHeader.id[0] != 'B' && bmpHeader.id[1] != 'M' ) 
+	if ( bmpHeader.id[0] != 'B' && bmpHeader.id[1] != 'M' )
 	{
 		common->Error( "LoadBMP: only Windows-style BMP files supported (%s)\n", name );
 	}
 	if ( bmpHeader.fileSize != length )
 	{
-		common->Error( "LoadBMP: header size does not match file size (%lu vs. %d) (%s)\n", bmpHeader.fileSize, length, name );
+		common->Error( "LoadBMP: header size does not match file size (%u vs. %d) (%s)\n", bmpHeader.fileSize, length, name );
 	}
 	if ( bmpHeader.compression != 0 )
 	{
@@ -327,7 +329,7 @@ static void LoadBMP( const char *name, byte **pic, int *width, int *height, ID_T
 		rows = -rows;
 	numPixels = columns * rows;
 
-	if ( width ) 
+	if ( width )
 		*width = columns;
 	if ( height )
 		*height = rows;
@@ -409,7 +411,7 @@ PCX LOADING
 LoadPCX
 ==============
 */
-static void LoadPCX ( const char *filename, byte **pic, byte **palette, int *width, int *height, 
+static void LoadPCX ( const char *filename, byte **pic, byte **palette, int *width, int *height,
 					 ID_TIME_T *timestamp ) {
 	byte	*raw;
 	pcx_t	*pcx;
@@ -441,8 +443,8 @@ static void LoadPCX ( const char *filename, byte **pic, byte **palette, int *wid
 	pcx = (pcx_t *)raw;
 	raw = &pcx->data;
 
-  	xmax = LittleShort(pcx->xmax);
-    ymax = LittleShort(pcx->ymax);
+	xmax = LittleShort(pcx->xmax);
+	ymax = LittleShort(pcx->ymax);
 
 	if (pcx->manufacturer != 0x0a
 		|| pcx->version != 5
@@ -582,7 +584,7 @@ static void LoadTGA( const char *name, byte **pic, int *width, int *height, ID_T
 	targa_header.id_length = *buf_p++;
 	targa_header.colormap_type = *buf_p++;
 	targa_header.image_type = *buf_p++;
-	
+
 	targa_header.colormap_index = LittleShort ( *(short *)buf_p );
 	buf_p += 2;
 	targa_header.colormap_length = LittleShort ( *(short *)buf_p );
@@ -635,9 +637,9 @@ static void LoadTGA( const char *name, byte **pic, int *width, int *height, ID_T
 	if ( targa_header.id_length != 0 ) {
 		buf_p += targa_header.id_length;  // skip TARGA image comment
 	}
-	
+
 	if ( targa_header.image_type == 2 || targa_header.image_type == 3 )
-	{ 
+	{
 		// Uncompressed RGB or gray scale image
 		for( row = rows - 1; row >= 0; row-- )
 		{
@@ -647,7 +649,7 @@ static void LoadTGA( const char *name, byte **pic, int *width, int *height, ID_T
 				unsigned char red,green,blue,alphabyte;
 				switch( targa_header.pixel_size )
 				{
-					
+
 				case 8:
 					blue = *buf_p++;
 					green = blue;
@@ -715,7 +717,7 @@ static void LoadTGA( const char *name, byte **pic, int *width, int *height, ID_T
 							common->Error( "LoadTGA( %s ): illegal pixel_size '%d'\n", name, targa_header.pixel_size );
 							break;
 					}
-	
+
 					for( j = 0; j < packetSize; j++ ) {
 						*pixbuf++=red;
 						*pixbuf++=green;
@@ -770,7 +772,7 @@ static void LoadTGA( const char *name, byte **pic, int *width, int *height, ID_T
 								goto breakOut;
 							}
 							pixbuf = targa_rgba + row*columns*4;
-						}						
+						}
 					}
 				}
 			}
@@ -793,6 +795,83 @@ JPG LOADING
 Interfaces with the huge libjpeg
 =========================================================
 */
+
+#ifdef HAVE_JPEG_MEM_SRC
+#define j_mem_src jpeg_mem_src
+#else
+static void init_mem_source(j_decompress_ptr cinfo)
+{
+	/* no work necessary here */
+}
+
+static boolean fill_mem_input_buffer(j_decompress_ptr cinfo)
+{
+	static JOCTET mybuffer[4];
+
+	/* The whole JPEG data is expected to reside in the supplied memory
+	 * buffer, so any request for more data beyond the given buffer size
+	 * is treated as an error.
+	 */
+	WARNMS(cinfo, JWRN_JPEG_EOF);
+	/* Insert a fake EOI marker */
+	mybuffer[0] = (JOCTET) 0xFF;
+	mybuffer[1] = (JOCTET) JPEG_EOI;
+
+	cinfo->src->next_input_byte = mybuffer;
+	cinfo->src->bytes_in_buffer = 2;
+
+	return TRUE;
+}
+
+static void skip_input_data(j_decompress_ptr cinfo, long num_bytes)
+{
+	struct jpeg_source_mgr *src = cinfo->src;
+
+	if (num_bytes > 0) {
+		while (num_bytes > (long)src->bytes_in_buffer) {
+			num_bytes -= (long)src->bytes_in_buffer;
+			(void)(*src->fill_input_buffer) (cinfo);
+			/* note we assume that fill_input_buffer will never return FALSE,
+			 * so suspension need not be handled.
+			 */
+		}
+		src->next_input_byte += (size_t)num_bytes;
+		src->bytes_in_buffer -= (size_t)num_bytes;
+	}
+}
+
+static void term_source(j_decompress_ptr cinfo)
+{
+	/* no work necessary here */
+}
+
+static void j_mem_src(j_decompress_ptr cinfo, unsigned char *inbuffer, unsigned long insize)
+{
+	struct jpeg_source_mgr *src;
+
+	if (inbuffer == NULL || insize == 0)	/* Treat empty input as fatal error */
+		ERREXIT(cinfo, JERR_INPUT_EMPTY);
+
+	/* The source object is made permanent so that a series of JPEG images
+	 * can be read from the same buffer by calling jpeg_mem_src only before
+	 * the first one.
+	 */
+	if (cinfo->src == NULL) {	/* first time for this JPEG object? */
+		cinfo->src = (struct jpeg_source_mgr *)
+			(*cinfo->mem->alloc_small)((j_common_ptr)cinfo, JPOOL_PERMANENT,
+										sizeof(struct jpeg_source_mgr));
+	}
+
+	src = cinfo->src;
+	src->init_source = init_mem_source;
+	src->fill_input_buffer = fill_mem_input_buffer;
+	src->skip_input_data = skip_input_data;
+	src->resync_to_restart = jpeg_resync_to_restart; /* use default method */
+	src->term_source = term_source;
+	src->bytes_in_buffer = (size_t)insize;
+	src->next_input_byte = (JOCTET *)inbuffer;
+}
+#endif
 
 /*
 =============
@@ -835,27 +914,25 @@ static void LoadJPG( const char *filename, unsigned char **pic, int *width, int 
   if ( pic ) {
 	*pic = NULL;		// until proven otherwise
   }
-  {
-		int		len;
-		idFile *f;
 
-		f = fileSystem->OpenFileRead( filename );
-		if ( !f ) {
-			return;
-		}
-		len = f->Length();
-		if ( timestamp ) {
-			*timestamp = f->Timestamp();
-		}
-		if ( !pic ) {
-			fileSystem->CloseFile( f );
-			return;	// just getting timestamp
-		}
-		fbuffer = (byte *)Mem_ClearedAlloc( len + 4096 );
-		f->Read( fbuffer, len );
+	int len;
+	idFile *f;
+
+	f = fileSystem->OpenFileRead( filename );
+	if ( !f ) {
+		return;
+	}
+	len = f->Length();
+	if ( timestamp ) {
+		*timestamp = f->Timestamp();
+	}
+	if ( !pic ) {
 		fileSystem->CloseFile( f );
-  }
-
+		return;	// just getting timestamp
+	}
+	fbuffer = (byte *)Mem_ClearedAlloc( len + 4096 );
+	f->Read( fbuffer, len );
+	fileSystem->CloseFile( f );
 
   /* Step 1: allocate and initialize JPEG decompression object */
 
@@ -871,7 +948,7 @@ static void LoadJPG( const char *filename, unsigned char **pic, int *width, int 
 
   /* Step 2: specify data source (eg, a file) */
 
-  jpeg_stdio_src(&cinfo, fbuffer);
+  j_mem_src(&cinfo, fbuffer, len);
 
   /* Step 3: read file parameters with jpeg_read_header() */
 
@@ -900,12 +977,12 @@ static void LoadJPG( const char *filename, unsigned char **pic, int *width, int 
    * output image dimensions available, as well as the output colormap
    * if we asked for color quantization.
    * In this example, we need to make an output work buffer of the right size.
-   */ 
+   */
   /* JSAMPLEs per row in output buffer */
   row_stride = cinfo.output_width * cinfo.output_components;
 
   if (cinfo.output_components!=4) {
-		common->DWarning( "JPG %s is unsupported color depth (%d)", 
+		common->DWarning( "JPG %s is unsupported color depth (%d)",
 			filename, cinfo.output_components);
   }
   out = (byte *)R_StaticAlloc(cinfo.output_width*cinfo.output_height*4);
@@ -921,13 +998,13 @@ static void LoadJPG( const char *filename, unsigned char **pic, int *width, int 
    * loop counter, so that we don't have to keep track ourselves.
    */
   while (cinfo.output_scanline < cinfo.output_height) {
-    /* jpeg_read_scanlines expects an array of pointers to scanlines.
-     * Here the array is only one element long, but you could ask for
-     * more than one scanline at a time if that's more convenient.
-     */
+	/* jpeg_read_scanlines expects an array of pointers to scanlines.
+	 * Here the array is only one element long, but you could ask for
+	 * more than one scanline at a time if that's more convenient.
+	 */
 	bbuf = ((out+(row_stride*cinfo.output_scanline)));
 	buffer = &bbuf;
-    (void) jpeg_read_scanlines(&cinfo, buffer, 1);
+	(void) jpeg_read_scanlines(&cinfo, buffer, 1);
   }
 
   // clear all the alphas to 255
@@ -1086,11 +1163,11 @@ Loads six files with proper extensions
 */
 bool R_LoadCubeImages( const char *imgName, cubeFiles_t extensions, byte *pics[6], int *outSize, ID_TIME_T *timestamp ) {
 	int		i, j;
-	char	*cameraSides[6] =  { "_forward.tga", "_back.tga", "_left.tga", "_right.tga", 
+	const char	*cameraSides[6] =  { "_forward.tga", "_back.tga", "_left.tga", "_right.tga",
 		"_up.tga", "_down.tga" };
-	char	*axisSides[6] =  { "_px.tga", "_nx.tga", "_py.tga", "_ny.tga", 
+	const char	*axisSides[6] =  { "_px.tga", "_nx.tga", "_py.tga", "_ny.tga",
 		"_pz.tga", "_nz.tga" };
-	char	**sides;
+	const char	**sides;
 	char	fullName[MAX_IMAGE_NAME];
 	int		width, height, size = 0;
 

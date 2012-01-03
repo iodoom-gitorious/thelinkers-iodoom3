@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,11 +26,14 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
+#include "framework/Licensee.h"
+#include "MayaImport/maya_main.h"
 
-#include "../Game_local.h"
-#include "../../MayaImport/maya_main.h"
+#include "gamesys/SysCvar.h"
+#include "Game_local.h"
+
+#include "anim/Anim.h"
 
 /***********************************************************************
 
@@ -42,7 +45,7 @@ static idStr				Maya_Error;
 
 static exporterInterface_t	Maya_ConvertModel = NULL;
 static exporterShutdown_t	Maya_Shutdown = NULL;
-static int					importDLL = 0;
+static uintptr_t			importDLL = 0;
 
 bool idModelExport::initialized = false;
 
@@ -140,7 +143,7 @@ void idModelExport::LoadMayaDll( void ) {
 	}
 
 	// look up the dll interface functions
-	dllEntry = ( exporterDLLEntry_t )sys->DLL_GetProcAddress( importDLL, "dllEntry" ); 
+	dllEntry = ( exporterDLLEntry_t )sys->DLL_GetProcAddress( importDLL, "dllEntry" );
 	Maya_ConvertModel = ( exporterInterface_t )sys->DLL_GetProcAddress( importDLL, "Maya_ConvertModel" );
 	Maya_Shutdown = ( exporterShutdown_t )sys->DLL_GetProcAddress( importDLL, "Maya_Shutdown" );
 	if ( !Maya_ConvertModel || !dllEntry || !Maya_Shutdown ) {
@@ -168,12 +171,12 @@ void idModelExport::LoadMayaDll( void ) {
 =====================
 idModelExport::ConvertMayaToMD5
 
-Checks if a Maya model should be converted to an MD5, and converts if if the time/date or 
+Checks if a Maya model should be converted to an MD5, and converts if if the time/date or
 version number has changed.
 =====================
 */
 bool idModelExport::ConvertMayaToMD5( void ) {
-	ID_TIME_T		
+	ID_TIME_T
 		sourceTime;
 	ID_TIME_T		destTime;
 	int			version;
@@ -256,7 +259,7 @@ bool idModelExport::ConvertMayaToMD5( void ) {
 	if ( Maya_Error != "Ok" ) {
 		return false;
 	}
-	
+
 	// conversion succeded
 	return true;
 }
@@ -409,7 +412,7 @@ int idModelExport::ParseExportSection( idParser &parser ) {
 			return 0;
 		}
 
-        parser.ReadToken( &token );
+		parser.ReadToken( &token );
 		if ( token.Icmp( g_exportMask.GetString() ) ) {
 			parser.SkipBracedSection();
 			return 0;

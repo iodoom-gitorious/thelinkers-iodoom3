@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,11 +26,10 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
+#include "Game_local.h"
 
-#include "AAS_local.h"
-#include "../Game_local.h"		// for print and error
+#include "ai/AAS_local.h"
 
 #define CACHETYPE_AREA				1
 #define CACHETYPE_PORTAL			2
@@ -167,7 +166,7 @@ void idAASLocal::CalculateAreaTravelTimes(void) {
 		}
 	}
 
-	assert( ( (unsigned int) bytePtr - (unsigned int) areaTravelTimes ) <= numAreaTravelTimes * sizeof( unsigned short ) );
+	assert(  ( ( ptrdiff_t ) bytePtr - ( ptrdiff_t ) areaTravelTimes ) <= numAreaTravelTimes * sizeof( unsigned short ) );
 }
 
 /*
@@ -327,9 +326,9 @@ void idAASLocal::RoutingStats( void ) const {
 	gameLocal.Printf( "%6d area cache (%d KB)\n", numAreaCache, totalAreaCacheMemory >> 10 );
 	gameLocal.Printf( "%6d portal cache (%d KB)\n", numPortalCache, totalPortalCacheMemory >> 10 );
 	gameLocal.Printf( "%6d total cache (%d KB)\n", numAreaCache + numPortalCache, totalCacheMemory >> 10 );
-	gameLocal.Printf( "%6d area travel times (%d KB)\n", numAreaTravelTimes, ( numAreaTravelTimes * sizeof( unsigned short ) ) >> 10 );
-	gameLocal.Printf( "%6d area cache entries (%d KB)\n", areaCacheIndexSize, ( areaCacheIndexSize * sizeof( idRoutingCache * ) ) >> 10 );
-	gameLocal.Printf( "%6d portal cache entries (%d KB)\n", portalCacheIndexSize, ( portalCacheIndexSize * sizeof( idRoutingCache * ) ) >> 10 );
+	gameLocal.Printf( "%6d area travel times (%zd KB)\n", numAreaTravelTimes, ( numAreaTravelTimes * sizeof( unsigned short ) ) >> 10 );
+	gameLocal.Printf( "%6d area cache entries (%zd KB)\n", areaCacheIndexSize, ( areaCacheIndexSize * sizeof( idRoutingCache * ) ) >> 10 );
+	gameLocal.Printf( "%6d portal cache entries (%zd KB)\n", portalCacheIndexSize, ( portalCacheIndexSize * sizeof( idRoutingCache * ) ) >> 10 );
 }
 
 /*
@@ -1193,7 +1192,7 @@ bool idAASLocal::FindNearestGoal( aasGoal_t &goal, int areaNum, const idVec3 ori
 		obstacles[k].expAbsBounds[0] = obstacles[k].absBounds[0] - file->GetSettings().boundingBoxes[0][1];
 		obstacles[k].expAbsBounds[1] = obstacles[k].absBounds[1] - file->GetSettings().boundingBoxes[0][0];
 	}
-	
+
 	badTravelFlags = ~travelFlags;
 	SIMDProcessor->Memset( goalAreaTravelTimes, 0, file->GetNumAreas() * sizeof( unsigned short ) );
 
@@ -1327,7 +1326,7 @@ bool idAASLocal::FindNearestGoal( aasGoal_t &goal, int areaNum, const idVec3 ori
 
 				// add travel time through the area
 				t += AreaTravelTime( reach->toAreaNum, reach->end, nextArea->center );
-	
+
 				if ( !bestTravelTime || t < bestTravelTime ) {
 					// if the area is not visible to the target
 					if ( callback.TestArea( this, reach->toAreaNum ) ) {

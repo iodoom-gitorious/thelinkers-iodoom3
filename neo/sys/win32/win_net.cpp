@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -25,13 +25,14 @@ If you have questions concerning this license or the applicable additional terms
 
 ===========================================================================
 */
-#include "../../idlib/precompiled.h"
-#pragma hdrstop
+
+#include "sys/platform.h"
+#include "framework/Common.h"
+
+#include "sys/win32/win_local.h"
 
 #include <iptypes.h>
 #include <iphlpapi.h>
-
-#include "win_local.h"
 
 static WSADATA	winsockdata;
 static bool	winsockInitialized = false;
@@ -60,7 +61,7 @@ typedef struct {
 	unsigned long mask;
 } net_interface;
 
-#define 		MAX_INTERFACES	32
+#define			MAX_INTERFACES	32
 int				num_interfaces = 0;
 net_interface	netint[MAX_INTERFACES];
 
@@ -72,7 +73,7 @@ net_interface	netint[MAX_INTERFACES];
 NET_ErrorString
 ====================
 */
-char *NET_ErrorString( void ) {
+const char *NET_ErrorString( void ) {
 	int		code;
 
 	code = WSAGetLastError();
@@ -197,7 +198,7 @@ static bool Net_StringToSockaddr( const char *s, struct sockaddr *sadr, bool doD
 	struct hostent	*h;
 	char buf[256];
 	int port;
-	
+
 	memset( sadr, 0, sizeof( *sadr ) );
 
 	((struct sockaddr_in *)sadr)->sin_family = AF_INET;
@@ -223,7 +224,7 @@ static bool Net_StringToSockaddr( const char *s, struct sockaddr *sadr, bool doD
 		// try to remove the port first, otherwise the DNS gets confused into multiple timeouts
 		// failed or not failed, buf is expected to contain the appropriate host to resolve
 		if ( Net_ExtractPort( s, buf, sizeof( buf ), &port ) ) {
-			((struct sockaddr_in *)sadr)->sin_port = htons( port );			
+			((struct sockaddr_in *)sadr)->sin_port = htons( port );
 		}
 		h = gethostbyname( buf );
 		if ( h == 0 ) {
@@ -231,7 +232,7 @@ static bool Net_StringToSockaddr( const char *s, struct sockaddr *sadr, bool doD
 		}
 		*(int *)&((struct sockaddr_in *)sadr)->sin_addr = *(int *)h->h_addr_list[0];
 	}
-	
+
 	return true;
 }
 
@@ -527,7 +528,7 @@ Net_GetUDPPacket
 ==================
 */
 bool Net_GetUDPPacket( int netSocket, netadr_t &net_from, char *data, int &size, int maxSize ) {
-	int 			ret;
+	int				ret;
 	struct sockaddr	from;
 	int				fromlen;
 	int				err;
@@ -664,7 +665,7 @@ void Sys_InitNetworking( void ) {
 	// the necessary size into the ulOutBufLen variable
 	if( GetAdaptersInfo( pAdapterInfo, &ulOutBufLen ) == ERROR_BUFFER_OVERFLOW ) {
 		free( pAdapterInfo );
-		pAdapterInfo = (IP_ADAPTER_INFO *)malloc( ulOutBufLen ); 
+		pAdapterInfo = (IP_ADAPTER_INFO *)malloc( ulOutBufLen );
 		if( !pAdapterInfo ) {
 			common->FatalError( "Sys_InitNetworking: Couldn't malloc( %ld )", ulOutBufLen );
 		}
@@ -736,11 +737,11 @@ Sys_StringToNetAdr
 */
 bool Sys_StringToNetAdr( const char *s, netadr_t *a, bool doDNSResolve ) {
 	struct sockaddr sadr;
-	
+
 	if ( !Net_StringToSockaddr( s, &sadr, doDNSResolve ) ) {
 		return false;
 	}
-	
+
 	Net_SockadrToNetadr( &sadr, a );
 	return true;
 }
@@ -794,13 +795,13 @@ bool Sys_IsLANAddress( const netadr_t adr ) {
 		unsigned long ip;
 		p_ip = (unsigned long *)&adr.ip[0];
 		ip = ntohl( *p_ip );
-                
+
 		for( i=0; i < num_interfaces; i++ ) {
 			if( ( netint[i].ip & netint[i].mask ) == ( ip & netint[i].mask ) ) {
 				return true;
 			}
-		} 
-	}	
+		}
+	}
 	return false;
 }
 
@@ -840,7 +841,7 @@ typedef struct udpMsg_s {
 	byte				data[MAX_UDP_MSG_SIZE];
 	netadr_t			address;
 	int					size;
-	int					time;
+	unsigned int		time;
 	struct udpMsg_s *	next;
 } udpMsg_t;
 
@@ -1101,27 +1102,27 @@ bool idTCP::Init( const char *host, short port ) {
 	if ( !address.port ) {
 		address.port = port;
 	}
-	common->Printf( "\"%s\" resolved to %i.%i.%i.%i:%i\n", host, 
+	common->Printf( "\"%s\" resolved to %i.%i.%i.%i:%i\n", host,
 					address.ip[0], address.ip[1], address.ip[2], address.ip[3], address.port );
 	Net_NetadrToSockadr( &address, &sadr );
 
 	if ( fd ) {
 		common->Warning( "idTCP::Init: already initialized?" );
 	}
-		
+
 	if ( ( fd = socket( AF_INET, SOCK_STREAM, 0 ) ) == INVALID_SOCKET ) {
 		fd = 0;
 		common->Printf( "ERROR: idTCP::Init: socket: %s\n", NET_ErrorString() );
 		return false;
 	}
-	
+
 	if ( connect( fd, &sadr, sizeof(sadr)) == SOCKET_ERROR ) {
 		common->Printf( "ERROR: idTCP::Init: connect: %s\n", NET_ErrorString() );
 		closesocket( fd );
 		fd = 0;
 		return false;
 	}
-	
+
 	// make it non-blocking
 	if( ioctlsocket( fd, FIONBIO, &_true ) == SOCKET_ERROR ) {
 		common->Printf( "ERROR: idTCP::Init: ioctl FIONBIO: %s\n", NET_ErrorString() );
@@ -1129,7 +1130,7 @@ bool idTCP::Init( const char *host, short port ) {
 		fd = 0;
 		return false;
 	}
-	
+
 	common->DPrintf( "Opened TCP connection\n" );
 	return true;
 }
@@ -1153,12 +1154,12 @@ idTCP::Read
 */
 int idTCP::Read( void *data, int size ) {
 	int nbytes;
-	
+
 	if ( !fd ) {
 		common->Printf("idTCP::Read: not initialized\n");
 		return -1;
 	}
-	
+
 	if ( ( nbytes = recv( fd, (char *)data, size, 0 ) ) == SOCKET_ERROR ) {
 		if ( WSAGetLastError() == WSAEWOULDBLOCK ) {
 			return 0;
@@ -1184,7 +1185,7 @@ idTCP::Write
 */
 int idTCP::Write( void *data, int size ) {
 	int nbytes;
-	
+
 	if ( !fd ) {
 		common->Printf("idTCP::Write: not initialized\n");
 		return -1;
@@ -1195,6 +1196,6 @@ int idTCP::Write( void *data, int size ) {
 		Close();
 		return -1;
 	}
-	
+
 	return nbytes;
 }

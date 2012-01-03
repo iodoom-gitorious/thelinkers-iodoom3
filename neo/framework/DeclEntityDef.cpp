@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,9 +26,11 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
+#include "framework/Common.h"
+#include "framework/Game.h"
 
+#include "framework/DeclEntityDef.h"
 
 /*
 =================
@@ -148,6 +150,6 @@ idDeclEntityDef::Print
 Dumps all key/value pairs, including inherited ones
 ================
 */
-void idDeclEntityDef::Print( void ) {
+void idDeclEntityDef::Print( void ) const {
 	dict.Print();
 }

@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -28,6 +28,11 @@ If you have questions concerning this license or the applicable additional terms
 
 #ifndef __MATH_VECTOR_H__
 #define __MATH_VECTOR_H__
+
+#include "idlib/math/Math.h"
+#include "idlib/math/Random.h"
+#include "idlib/math/Simd.h"
+#include "idlib/Heap.h"
 
 /*
 ===============================================================================
@@ -57,7 +62,7 @@ public:
 					idVec2( void );
 					explicit idVec2( const float x, const float y );
 
-	void 			Set( const float x, const float y );
+	void			Set( const float x, const float y );
 	void			Zero( void );
 
 	float			operator[]( int index ) const;
@@ -128,7 +133,7 @@ ID_INLINE bool idVec2::Compare( const idVec2 &a, const float epsilon ) const {
 	if ( idMath::Fabs( x - a.x ) > epsilon ) {
 		return false;
 	}
-			
+
 	if ( idMath::Fabs( y - a.y ) > epsilon ) {
 		return false;
 	}
@@ -232,7 +237,7 @@ ID_INLINE void idVec2::SnapInt( void ) {
 ID_INLINE idVec2 idVec2::operator-() const {
 	return idVec2( -x, -y );
 }
-	
+
 ID_INLINE idVec2 idVec2::operator-( const idVec2 &a ) const {
 	return idVec2( x - a.x, y - a.y );
 }
@@ -314,7 +319,7 @@ ID_INLINE float *idVec2::ToFloatPtr( void ) {
 //===============================================================
 
 class idVec3 {
-public:	
+public:
 	float			x;
 	float			y;
 	float			z;
@@ -322,7 +327,7 @@ public:
 					idVec3( void );
 					explicit idVec3( const float x, const float y, const float z );
 
-	void 			Set( const float x, const float y, const float z );
+	void			Set( const float x, const float y, const float z );
 	void			Zero( void );
 
 	float			operator[]( const int index ) const;
@@ -501,7 +506,7 @@ ID_INLINE bool idVec3::Compare( const idVec3 &a, const float epsilon ) const {
 	if ( idMath::Fabs( x - a.x ) > epsilon ) {
 		return false;
 	}
-			
+
 	if ( idMath::Fabs( y - a.y ) > epsilon ) {
 		return false;
 	}
@@ -768,9 +773,9 @@ ID_INLINE void idVec3::OrthogonalBasis( idVec3 &left, idVec3 &up ) const {
 
 ID_INLINE void idVec3::ProjectOntoPlane( const idVec3 &normal, const float overBounce ) {
 	float backoff;
-	
+
 	backoff = *this * normal;
-	
+
 	if ( overBounce != 1.0 ) {
 		if ( backoff < 0 ) {
 			backoff *= overBounce;
@@ -806,7 +811,7 @@ ID_INLINE bool idVec3::ProjectAlongPlane( const idVec3 &normal, const float epsi
 //===============================================================
 
 class idVec4 {
-public:	
+public:
 	float			x;
 	float			y;
 	float			z;
@@ -815,7 +820,7 @@ public:
 					idVec4( void );
 					explicit idVec4( const float x, const float y, const float z, const float w );
 
-	void 			Set( const float x, const float y, const float z, const float w );
+	void			Set( const float x, const float y, const float z, const float w );
 	void			Zero( void );
 
 	float			operator[]( const int index ) const;
@@ -972,7 +977,7 @@ ID_INLINE bool idVec4::Compare( const idVec4 &a, const float epsilon ) const {
 	if ( idMath::Fabs( x - a.x ) > epsilon ) {
 		return false;
 	}
-			
+
 	if ( idMath::Fabs( y - a.y ) > epsilon ) {
 		return false;
 	}
@@ -1120,7 +1125,7 @@ ID_INLINE float& idVec5::operator[]( int index ) {
 	return ( &x )[ index ];
 }
 
-ID_INLINE idVec5 &idVec5::operator=( const idVec3 &a ) { 
+ID_INLINE idVec5 &idVec5::operator=( const idVec3 &a ) {
 	x = a.x;
 	y = a.y;
 	z = a.z;
@@ -1156,12 +1161,12 @@ ID_INLINE float *idVec5::ToFloatPtr( void ) {
 //===============================================================
 
 class idVec6 {
-public:	
+public:
 					idVec6( void );
 					explicit idVec6( const float *a );
 					explicit idVec6( const float a1, const float a2, const float a3, const float a4, const float a5, const float a6 );
 
-	void 			Set( const float a1, const float a2, const float a3, const float a4, const float a5, const float a6 );
+	void			Set( const float a1, const float a2, const float a3, const float a4, const float a5, const float a6 );
 	void			Zero( void );
 
 	float			operator[]( const int index ) const;
@@ -1314,7 +1319,7 @@ ID_INLINE bool idVec6::Compare( const idVec6 &a, const float epsilon ) const {
 	if ( idMath::Fabs( p[0] - a[0] ) > epsilon ) {
 		return false;
 	}
-			
+
 	if ( idMath::Fabs( p[1] - a[1] ) > epsilon ) {
 		return false;
 	}
@@ -1435,7 +1440,7 @@ ID_INLINE float *idVec6::ToFloatPtr( void ) {
 class idVecX {
 	friend class idMatX;
 
-public:	
+public:
 					idVecX( void );
 					explicit idVecX( int length );
 					explicit idVecX( int length, float *data );
@@ -1548,7 +1553,7 @@ ID_INLINE idVecX idVecX::operator-() const {
 	return m;
 }
 
-ID_INLINE idVecX &idVecX::operator=( const idVecX &a ) { 
+ID_INLINE idVecX &idVecX::operator=( const idVecX &a ) {
 	SetSize( a.size );
 #ifdef VECX_SIMD
 	SIMDProcessor->Copy16( p, a.p, a.size );
@@ -1757,7 +1762,7 @@ ID_INLINE void idVecX::SetData( int length, float *data ) {
 	if ( p && ( p < idVecX::tempPtr || p >= idVecX::tempPtr + VECX_MAX_TEMP ) && alloced != -1 ) {
 		Mem_Free16( p );
 	}
-	assert( ( ( (int) data ) & 15 ) == 0 ); // data must be 16 byte aligned
+	assert( ( ( (uintptr_t) data ) & 15 ) == 0 ); // data must be 16 byte aligned
 	p = data;
 	size = length;
 	alloced = -1;
@@ -1923,13 +1928,13 @@ ID_INLINE float *idVecX::ToFloatPtr( void ) {
 //===============================================================
 
 class idPolar3 {
-public:	
+public:
 	float			radius, theta, phi;
 
 					idPolar3( void );
 					explicit idPolar3( const float radius, const float theta, const float phi );
 
-	void 			Set( const float radius, const float theta, const float phi );
+	void			Set( const float radius, const float theta, const float phi );
 
 	float			operator[]( const int index ) const;
 	float &			operator[]( const int index );
@@ -1948,7 +1953,7 @@ ID_INLINE idPolar3::idPolar3( const float radius, const float theta, const float
 	this->theta = theta;
 	this->phi = phi;
 }
-	
+
 ID_INLINE void idPolar3::Set( const float radius, const float theta, const float phi ) {
 	assert( radius > 0 );
 	this->radius = radius;
@@ -1968,7 +1973,7 @@ ID_INLINE idPolar3 idPolar3::operator-() const {
 	return idPolar3( radius, -theta, -phi );
 }
 
-ID_INLINE idPolar3 &idPolar3::operator=( const idPolar3 &a ) { 
+ID_INLINE idPolar3 &idPolar3::operator=( const idPolar3 &a ) {
 	radius = a.radius;
 	theta = a.theta;
 	phi = a.phi;
@@ -1979,7 +1984,7 @@ ID_INLINE idVec3 idPolar3::ToVec3( void ) const {
 	float sp, cp, st, ct;
 	idMath::SinCos( phi, sp, cp );
 	idMath::SinCos( theta, st, ct );
- 	return idVec3( cp * radius * ct, cp * radius * st, radius * sp );
+	return idVec3( cp * radius * ct, cp * radius * st, radius * sp );
 }
 
 

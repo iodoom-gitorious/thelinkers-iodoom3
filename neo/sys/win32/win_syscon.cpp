@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,8 +26,15 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
+#include "framework/Licensee.h"
+#include "framework/Common.h"
+#include "framework/KeyInput.h"
+#include "framework/EditField.h"
+#include "sys/win32/rc/AFEditor_resource.h"
+#include "sys/win32/rc/doom_resource.h"
+
+#include "sys/win32/win_local.h"
 
 #include <errno.h>
 #include <float.h>
@@ -36,10 +43,6 @@ If you have questions concerning this license or the applicable additional terms
 #include <direct.h>
 #include <io.h>
 #include <conio.h>
-
-#include "win_local.h"
-#include "rc/AFEditor_resource.h"
-#include "rc/doom_resource.h"
 
 #define COPY_ID			1
 #define QUIT_ID			2
@@ -80,7 +83,7 @@ typedef struct {
 	char		consoleText[512], returnedText[512];
 	bool		quitOnClose;
 	int			windowWidth, windowHeight;
-	 
+
 	WNDPROC		SysInputLineWndProc;
 
 	idEditField	historyEditLines[COMMAND_HISTORY];
@@ -170,7 +173,7 @@ static LONG WINAPI ConWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 				assert( oldObject != 0 );
 				if ( oldObject )
 				{
-					StretchBlt( ( HDC ) wParam, 0, 0, s_wcd.windowWidth, s_wcd.windowHeight, 
+					StretchBlt( ( HDC ) wParam, 0, 0, s_wcd.windowWidth, s_wcd.windowHeight,
 						hdcScaled, 0, 0, 512, 384,
 						SRCCOPY );
 				}
@@ -187,9 +190,9 @@ static LONG WINAPI ConWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 				}
 			}
 			break;
-    }
+	}
 
-    return DefWindowProc( hWnd, uMsg, wParam, lParam );
+	return DefWindowProc( hWnd, uMsg, wParam, lParam );
 }
 
 LONG WINAPI InputLineWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -267,7 +270,7 @@ LONG WINAPI InputLineWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 		}
 
 		// clear autocompletion buffer on normal key input
-		if ( ( key >= K_SPACE && key <= K_BACKSPACE ) || 
+		if ( ( key >= K_SPACE && key <= K_BACKSPACE ) ||
 			( key >= K_KP_SLASH && key <= K_KP_PLUS ) || ( key >= K_KP_STAR && key <= K_KP_EQUALS ) ) {
 			s_wcd.consoleField.ClearAutoComplete();
 		}
@@ -350,10 +353,10 @@ void Sys_CreateConsole( void ) {
 	//
 	// create the input line
 	//
-	s_wcd.hwndInputLine = CreateWindow( "edit", NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | 
+	s_wcd.hwndInputLine = CreateWindow( "edit", NULL, WS_CHILD | WS_VISIBLE | WS_BORDER |
 												ES_LEFT | ES_AUTOHSCROLL,
 												6, 400, 528, 20,
-												s_wcd.hWnd, 
+												s_wcd.hWnd,
 												( HMENU ) INPUT_ID,	// child window ID
 												win32.hInstance, NULL );
 
@@ -362,21 +365,21 @@ void Sys_CreateConsole( void ) {
 	//
 	s_wcd.hwndButtonCopy = CreateWindow( "button", NULL, BS_PUSHBUTTON | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
 												5, 425, 72, 24,
-												s_wcd.hWnd, 
+												s_wcd.hWnd,
 												( HMENU ) COPY_ID,	// child window ID
 												win32.hInstance, NULL );
 	SendMessage( s_wcd.hwndButtonCopy, WM_SETTEXT, 0, ( LPARAM ) "copy" );
 
 	s_wcd.hwndButtonClear = CreateWindow( "button", NULL, BS_PUSHBUTTON | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
 												82, 425, 72, 24,
-												s_wcd.hWnd, 
+												s_wcd.hWnd,
 												( HMENU ) CLEAR_ID,	// child window ID
 												win32.hInstance, NULL );
 	SendMessage( s_wcd.hwndButtonClear, WM_SETTEXT, 0, ( LPARAM ) "clear" );
 
 	s_wcd.hwndButtonQuit = CreateWindow( "button", NULL, BS_PUSHBUTTON | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
 												462, 425, 72, 24,
-												s_wcd.hWnd, 
+												s_wcd.hWnd,
 												( HMENU ) QUIT_ID,	// child window ID
 												win32.hInstance, NULL );
 	SendMessage( s_wcd.hwndButtonQuit, WM_SETTEXT, 0, ( LPARAM ) "quit" );
@@ -385,10 +388,10 @@ void Sys_CreateConsole( void ) {
 	//
 	// create the scrollbuffer
 	//
-	s_wcd.hwndBuffer = CreateWindow( "edit", NULL, WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_BORDER | 
+	s_wcd.hwndBuffer = CreateWindow( "edit", NULL, WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_BORDER |
 												ES_LEFT | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
 												6, 40, 526, 354,
-												s_wcd.hWnd, 
+												s_wcd.hWnd,
 												( HMENU ) EDIT_ID,	// child window ID
 												win32.hInstance, NULL );
 	SendMessage( s_wcd.hwndBuffer, WM_SETFONT, ( WPARAM ) s_wcd.hfBufferFont, 0 );
@@ -457,14 +460,14 @@ void Sys_ShowConsole( int visLevel, bool quitOnClose ) {
 ** Sys_ConsoleInput
 */
 char *Sys_ConsoleInput( void ) {
-	
+
 	if ( s_wcd.consoleText[0] == 0 ) {
 		return NULL;
 	}
-		
+
 	strcpy( s_wcd.returnedText, s_wcd.consoleText );
 	s_wcd.consoleText[0] = 0;
-	
+
 	return s_wcd.returnedText;
 }
 
@@ -545,7 +548,7 @@ void Win_SetErrorText( const char *buf ) {
 	if ( !s_wcd.hwndErrorBox ) {
 		s_wcd.hwndErrorBox = CreateWindow( "static", NULL, WS_CHILD | WS_VISIBLE | SS_SUNKEN,
 													6, 5, 526, 30,
-													s_wcd.hWnd, 
+													s_wcd.hWnd,
 													( HMENU ) ERRORBOX_ID,	// child window ID
 													win32.hInstance, NULL );
 		SendMessage( s_wcd.hwndErrorBox, WM_SETFONT, ( WPARAM ) s_wcd.hfBufferFont, 0 );

@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -28,6 +28,15 @@ If you have questions concerning this license or the applicable additional terms
 
 #ifndef __RENDERWORLD_H__
 #define __RENDERWORLD_H__
+
+#include "idlib/geometry/Winding.h"
+#include "idlib/bv/Box.h"
+#include "idlib/bv/Frustum.h"
+#include "framework/DeclParticle.h"
+#include "renderer/Material.h"
+
+class idDemoFile;
+class idRenderModel;
 
 /*
 ===============================================================================
@@ -216,7 +225,7 @@ typedef struct renderView_s {
 	idMat3					viewaxis;			// transformation matrix, view looks down the positive X axis
 
 	bool					cramZNear;			// for cinematics, we want to set ZNear much lower
-	bool					forceUpdate;		// for an update 
+	bool					forceUpdate;		// for an update
 
 	// time in milliseconds for shader effects and other time dependent rendering issues
 	int						time;
@@ -394,7 +403,7 @@ public:
 	// the next renderScene
 	virtual bool			ProcessDemoCommand( idDemoFile *readDemo, renderView_t *demoRenderView, int *demoTimeOffset ) = 0;
 
-	// this is used to regenerate all interactions ( which is currently only done during influences ), there may be a less 
+	// this is used to regenerate all interactions ( which is currently only done during influences ), there may be a less
 	// expensive way to do it
 	virtual void			RegenerateWorld() = 0;
 

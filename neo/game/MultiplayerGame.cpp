@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,10 +26,19 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
+#include "idlib/BitMsg.h"
+#include "idlib/Str.h"
+#include "idlib/LangDict.h"
+#include "framework/async/NetworkSystem.h"
+#include "framework/FileSystem.h"
+#include "ui/UserInterface.h"
 
+#include "gamesys/SysCvar.h"
+#include "Player.h"
 #include "Game_local.h"
+
+#include "MultiplayerGame.h"
 
 // could be a problem if players manage to go down sudden deaths till this .. oh well
 #define LASTMAN_NOLIVES -20
@@ -193,7 +202,7 @@ void idMultiplayerGame::SpawnPlayer( int clientNum ) {
 	bool ingame = playerState[ clientNum ].ingame;
 
 	memset( &playerState[ clientNum ], 0, sizeof( playerState[ clientNum ] ) );
-	if ( !gameLocal.isClient ) {		
+	if ( !gameLocal.isClient ) {
 		idPlayer *p = static_cast< idPlayer * >( gameLocal.entities[ clientNum ] );
 		p->spawnedTime = gameLocal.time;
 		if ( gameLocal.gameType == GAME_TDM ) {
@@ -260,7 +269,7 @@ idMultiplayerGame::ClearGuis
 */
 void idMultiplayerGame::ClearGuis() {
 	int i;
-	
+
 	for ( i = 0; i < MAX_CLIENTS; i++ ) {
 		scoreBoard->SetStateString( va( "player%i",i+1 ), "" );
 		scoreBoard->SetStateString( va( "player%i_score", i+1 ), "" );
@@ -280,7 +289,7 @@ void idMultiplayerGame::ClearGuis() {
 		player->hud->SetStateString( va( "player%i_ready", i+1 ), "" );
 		scoreBoard->SetStateInt( va( "rank%i", i+1 ), 0 );
 		player->hud->SetStateInt( "rank_self", 0 );
-	}		
+	}
 }
 
 /*
@@ -437,7 +446,7 @@ void idMultiplayerGame::UpdateScoreboard( idUserInterface *scoreBoard, idPlayer 
 					continue;
 				}
 			}
-	
+
 			iline++;
 			if ( !playerState[ i ].ingame ) {
 				scoreBoard->SetStateString( va( "player%i", iline ), common->GetLanguageDict()->GetString( "#str_04244" ) );
@@ -504,7 +513,7 @@ void idMultiplayerGame::UpdateScoreboard( idUserInterface *scoreBoard, idPlayer 
 
 	} else {
 		livesinfo = va( "%s: %i", common->GetLanguageDict()->GetString( "#str_01982" ), gameLocal.serverInfo.GetInt( "si_fragLimit" ) );
-	} 
+	}
 	if ( gameLocal.serverInfo.GetInt( "si_timeLimit" ) > 0 ) {
 		timeinfo = va( "%s: %i", common->GetLanguageDict()->GetString( "#str_01983" ), gameLocal.serverInfo.GetInt( "si_timeLimit" ) );
 	} else {
@@ -544,7 +553,7 @@ const char *idMultiplayerGame::GameTime() {
 		if ( ms < 0 ) {
 			ms = 0;
 		}
-	
+
 		s = ms / 1000;
 		m = s / 60;
 		s -= m * 60;
@@ -701,7 +710,7 @@ idPlayer *idMultiplayerGame::FragLimitHit() {
 idMultiplayerGame::TimeLimitHit
 ================
 */
-bool idMultiplayerGame::TimeLimitHit() {	
+bool idMultiplayerGame::TimeLimitHit() {
 	int timeLimit = gameLocal.serverInfo.GetInt( "si_timeLimit" );
 	if ( timeLimit ) {
 		if ( gameLocal.time >= matchStartedTime + timeLimit * 60000 ) {
@@ -827,7 +836,7 @@ void idMultiplayerGame::UpdateWinsLosses( idPlayer *winner ) {
 					PlayGlobalSound( player->entityNumber, SND_YOULOSE );
 				}
 			} else if ( gameLocal.gameType == GAME_TOURNEY ) {
-				if ( player == winner ) { 
+				if ( player == winner ) {
 					playerState[ i ].wins++;
 					PlayGlobalSound( player->entityNumber, SND_YOUWIN );
 				} else if ( i == currentTourneyPlayer[ 0 ] || i == currentTourneyPlayer[ 1 ] ) {
@@ -928,14 +937,14 @@ void idMultiplayerGame::PlayerStats( int clientNum, char *data, const int len ) 
 	}
 
 	// find which team this player is on
-	ent = gameLocal.entities[ clientNum ]; 
+	ent = gameLocal.entities[ clientNum ];
 	if ( ent && ent->IsType( idPlayer::Type ) ) {
 		team = static_cast< idPlayer * >(ent)->team;
 	} else {
 		return;
 	}
 
-	idStr::snPrintf( data, len, "team=%d score=%ld tks=%ld", team, playerState[ clientNum ].fragCount, playerState[ clientNum ].teamFragCount );
+	idStr::snPrintf( data, len, "team=%d score=%d tks=%d", team, playerState[ clientNum ].fragCount, playerState[ clientNum ].teamFragCount );
 
 	return;
 
@@ -1169,7 +1178,7 @@ void idMultiplayerGame::CycleTourneyPlayers( ) {
 	if ( lastWinner != -1 ) {
 		idEntity *ent = gameLocal.entities[ lastWinner ];
 		if ( ent && ent->IsType( idPlayer::Type ) ) {
-			currentTourneyPlayer[ 0 ] = lastWinner;		
+			currentTourneyPlayer[ 0 ] = lastWinner;
 		}
 	}
 	FillTourneySlots( );
@@ -1485,12 +1494,7 @@ void idMultiplayerGame::UpdateMainGui( void ) {
 		mainGui->SetStateString( keyval->GetKey(), keyval->GetValue() );
 	}
 	mainGui->StateChanged( gameLocal.time );
-#if defined( __linux__ )
-	// replacing the oh-so-useful s_reverse with sound backend prompt
-	mainGui->SetStateString( "driver_prompt", "1" );
-#else
 	mainGui->SetStateString( "driver_prompt", "0" );
-#endif
 }
 
 /*
@@ -2032,11 +2036,11 @@ idMultiplayerGame::AddChatLine
 void idMultiplayerGame::AddChatLine( const char *fmt, ... ) {
 	idStr temp;
 	va_list argptr;
-	
+
 	va_start( argptr, fmt );
 	vsprintf( temp, fmt, argptr );
 	va_end( argptr );
-	
+
 	gameLocal.Printf( "%s\n", temp.c_str() );
 
 	chatHistory[ chatHistoryIndex % NUM_CHAT_NOTIFY ].line = temp;
@@ -2330,7 +2334,7 @@ void idMultiplayerGame::CheckRespawns( idPlayer *spectator ) {
 					gameLocal.gameType == GAME_TDM ) {
 					if ( gameState == WARMUP || gameState == COUNTDOWN || gameState == GAMEON ) {
 						p->ServerSpectate( false );
-					}				
+					}
 				} else if ( gameLocal.gameType == GAME_TOURNEY ) {
 					if ( i == currentTourneyPlayer[ 0 ] || i == currentTourneyPlayer[ 1 ] ) {
 						if ( gameState == WARMUP || gameState == COUNTDOWN || gameState == GAMEON ) {
@@ -2366,7 +2370,7 @@ void idMultiplayerGame::CheckRespawns( idPlayer *spectator ) {
 								// so set the fragCount to something silly ( used in scoreboard and player ranking )
 								playerState[ i ].fragCount = LASTMAN_NOLIVES;
 								p->ServerSpectate( true );
-								
+
 								//Check for a situation where the last two player dies at the same time and don't
 								//try to respawn manually...This was causing all players to go into spectate mode
 								//and the server got stuck
@@ -2645,7 +2649,7 @@ void idMultiplayerGame::ClientCallVote( vote_flags_t voteIndex, const char *vote
 	idBitMsg	outMsg;
 	byte		msgBuf[ MAX_GAME_MESSAGE_SIZE ];
 
-	// send 
+	// send
 	outMsg.Init( msgBuf, sizeof( msgBuf ) );
 	outMsg.WriteByte( GAME_RELIABLE_MESSAGE_CALLVOTE );
 	outMsg.WriteByte( voteIndex );
@@ -2733,7 +2737,7 @@ void idMultiplayerGame::ServerCallVote( int clientNum, const idBitMsg &msg ) {
 			if ( vote_timeLimit == gameLocal.serverInfo.GetInt( "si_timeLimit" ) ) {
 				gameLocal.ServerSendChatMessage( clientNum, "server", common->GetLanguageDict()->GetString( "#str_04270" ) );
 				common->DPrintf( "client %d: already at the voted Time Limit\n", clientNum );
-				return;					
+				return;
 			}
 			if ( vote_timeLimit < si_timeLimit.GetMinValue() || vote_timeLimit > si_timeLimit.GetMaxValue() ) {
 				gameLocal.ServerSendChatMessage( clientNum, "server", common->GetLanguageDict()->GetString( "#str_04269" ) );
@@ -2748,7 +2752,7 @@ void idMultiplayerGame::ServerCallVote( int clientNum, const idBitMsg &msg ) {
 			if ( vote_fragLimit == gameLocal.serverInfo.GetInt( "si_fragLimit" ) ) {
 				gameLocal.ServerSendChatMessage( clientNum, "server", common->GetLanguageDict()->GetString( "#str_04267" ) );
 				common->DPrintf( "client %d: already at the voted Frag Limit\n", clientNum );
-				return;					
+				return;
 			}
 			if ( vote_fragLimit < si_fragLimit.GetMinValue() || vote_fragLimit > si_fragLimit.GetMaxValue() ) {
 				gameLocal.ServerSendChatMessage( clientNum, "server", common->GetLanguageDict()->GetString( "#str_04266" ) );
@@ -2944,11 +2948,11 @@ void idMultiplayerGame::SwitchToTeam( int clientNum, int oldteam, int newteam ) 
 		if ( i == clientNum ) {
 			continue;
 		}
-		ent = gameLocal.entities[ i ]; 
+		ent = gameLocal.entities[ i ];
 		if ( ent && ent->IsType( idPlayer::Type ) && static_cast< idPlayer * >(ent)->team == newteam ) {
 			playerState[ clientNum ].teamFragCount = playerState[ i ].teamFragCount;
 			break;
-		}	
+		}
 	}
 	if ( i == gameLocal.numClients ) {
 		// alone on this team
@@ -2977,7 +2981,7 @@ void idMultiplayerGame::ProcessChatMessage( int clientNum, bool team, const char
 	const char *prefix = NULL;
 	int			send_to; // 0 - all, 1 - specs, 2 - team
 	int			i;
-	idEntity 	*ent;
+	idEntity	*ent;
 	idPlayer	*p;
 	idStr		prefixed_name;
 
@@ -3028,7 +3032,7 @@ void idMultiplayerGame::ProcessChatMessage( int clientNum, bool team, const char
 		}
 	} else {
 		for ( i = 0; i < gameLocal.numClients; i++ ) {
-			ent = gameLocal.entities[ i ]; 
+			ent = gameLocal.entities[ i ];
 			if ( !ent || !ent->IsType( idPlayer::Type ) ) {
 				continue;
 			}
@@ -3068,7 +3072,7 @@ void idMultiplayerGame::Precache( void ) {
 		return;
 	}
 	gameLocal.FindEntityDefDict( "player_doommarine", false );;
-	
+
 	// skins
 	idStr str = cvarSystem->GetCVarString( "mod_validSkins" );
 	idStr skin;
@@ -3148,7 +3152,7 @@ idMultiplayerGame::ToggleTeam
 void idMultiplayerGame::ToggleTeam( void ) {
 	bool team;
 	assert( gameLocal.isClient || gameLocal.localClientNum == 0 );
-	
+
 	team = ( idStr::Icmp( cvarSystem->GetCVarString( "ui_team" ), "Red" ) == 0 );
 	if ( team ) {
 		cvarSystem->SetCVarString( "ui_team", "Blue" );
@@ -3349,7 +3353,7 @@ void idMultiplayerGame::ServerWriteInitialReliableMessages( int clientNum ) {
 	outMsg.WriteShort( startFragLimit );
 	// send the powerup states and the spectate states
 	for( i = 0; i < gameLocal.numClients; i++ ) {
-		ent = gameLocal.entities[ i ]; 
+		ent = gameLocal.entities[ i ];
 		if ( i != clientNum && ent && ent->IsType( idPlayer::Type ) ) {
 			outMsg.WriteShort( i );
 			outMsg.WriteShort( static_cast< idPlayer * >( ent )->inventory.powerups );
@@ -3407,4 +3411,3 @@ idMultiplayerGame::ClientReadWarmupTime
 void idMultiplayerGame::ClientReadWarmupTime( const idBitMsg &msg ) {
 	warmupEndTime = msg.ReadLong();
 }
-

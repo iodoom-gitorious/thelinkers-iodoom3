@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -34,10 +34,9 @@ If you have questions concerning this license or the applicable additional terms
 ===============================================================================
 */
 
-#include "../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
 
-#include "CollisionModel_local.h"
+#include "cm/CollisionModel_local.h"
 
 /*
 ===============================================================================
@@ -1610,10 +1609,6 @@ void idCollisionModelManagerLocal::Rotation180( trace_t *results, const idVec3 &
 idCollisionModelManagerLocal::Rotation
 ================
 */
-#ifdef _DEBUG
-static int entered = 0;
-#endif
-
 void idCollisionModelManagerLocal::Rotation( trace_t *results, const idVec3 &start, const idRotation &rotation,
 										const idTraceModel *trm, const idMat3 &trmAxis, int contentMask,
 										cmHandle_t model, const idVec3 &modelOrigin, const idMat3 &modelAxis ) {
@@ -1630,21 +1625,6 @@ void idCollisionModelManagerLocal::Rotation( trace_t *results, const idVec3 &sta
 		idCollisionModelManagerLocal::ContentsTrm( results, start, trm, trmAxis, contentMask, model, modelOrigin, modelAxis );
 		return;
 	}
-
-#ifdef _DEBUG
-	bool startsolid = false;
-	// test whether or not stuck to begin with
-	if ( cm_debugCollision.GetBool() ) {
-		if ( !entered ) {
-			entered = 1;
-			// if already messed up to begin with
-			if ( idCollisionModelManagerLocal::Contents( start, trm, trmAxis, -1, model, modelOrigin, modelAxis ) & contentMask ) {
-				startsolid = true;
-			}
-			entered = 0;
-		}
-	}
-#endif
 
 	if ( rotation.GetAngle() >= 180.0f || rotation.GetAngle() <= -180.0f) {
 		if ( rotation.GetAngle() >= 360.0f ) {
@@ -1674,20 +1654,16 @@ void idCollisionModelManagerLocal::Rotation( trace_t *results, const idVec3 &sta
 	idCollisionModelManagerLocal::Rotation180( results, rotation.GetOrigin(), rotation.GetVec(), 0.0f, rotation.GetAngle(), start, trm, trmAxis, contentMask, model, modelOrigin, modelAxis );
 
 #ifdef _DEBUG
-	// test for missed collisions
+	// test for collisions
 	if ( cm_debugCollision.GetBool() ) {
-		if ( !entered ) {
-			entered = 1;
-			// if the trm is stuck in the model
-			if ( idCollisionModelManagerLocal::Contents( results->endpos, trm, results->endAxis, -1, model, modelOrigin, modelAxis ) & contentMask ) {
-				trace_t tr;
+		// if the trm is stuck in the model
+		if ( idCollisionModelManagerLocal::Contents( results->endpos, trm, results->endAxis, -1, model, modelOrigin, modelAxis ) & contentMask ) {
+			trace_t tr;
 
-				// test where the trm is stuck in the model
-				idCollisionModelManagerLocal::Contents( results->endpos, trm, results->endAxis, -1, model, modelOrigin, modelAxis );
-				// re-run collision detection to find out where it failed
-				idCollisionModelManagerLocal::Rotation( &tr, start, rotation, trm, trmAxis, contentMask, model, modelOrigin, modelAxis );
-			}
-			entered = 0;
+			// test where the trm is stuck in the model
+			idCollisionModelManagerLocal::Contents( results->endpos, trm, results->endAxis, -1, model, modelOrigin, modelAxis );
+			// re-run collision detection to find out where it failed
+			idCollisionModelManagerLocal::Rotation( &tr, start, rotation, trm, trmAxis, contentMask, model, modelOrigin, modelAxis );
 		}
 	}
 #endif

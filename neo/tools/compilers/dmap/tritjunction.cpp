@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,10 +26,10 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../../../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
+#include "renderer/ModelManager.h"
 
-#include "dmap.h"
+#include "tools/compilers/dmap/dmap.h"
 
 /*
 
@@ -46,16 +46,16 @@ If you have questions concerning this license or the applicable additional terms
 
   Snaping verts can drag some triangles backwards or collapse them to points,
   which will cause them to be removed.
-  
+
 
   When snapping to ints, a point can move a maximum of sqrt(3)/2 distance
   Two points that were an epsilon apart can then become sqrt(3) apart
 
   A case that causes recursive overflow with point to triangle fixing:
 
-               A
+			   A
 	C            D
-	           B
+			   B
 
   Triangle ABC tests against point D and splits into triangles ADC and DBC
   Triangle DBC then tests against point A again and splits into ABC and ADB
@@ -148,7 +148,7 @@ struct hashVert_s	*GetHashVert( idVec3 &v ) {
 #endif
 	}
 
-	// create a new one 
+	// create a new one
 	hv = (hashVert_t *)Mem_Alloc( sizeof( *hv ) );
 
 	hv->next = hashVerts[block[0]][block[1]][block[2]];
@@ -298,7 +298,7 @@ on an edge of the given mapTri, otherwise returns NULL.
 */
 static mapTri_t *FixTriangleAgainstHashVert( const mapTri_t *a, const hashVert_t *hv ) {
 	int			i;
-	const idDrawVert	*v1, *v2, *v3;
+	const idDrawVert	*v1, *v2;
 	idDrawVert	split;
 	idVec3		dir;
 	float		len;
@@ -317,13 +317,14 @@ static mapTri_t *FixTriangleAgainstHashVert( const mapTri_t *a, const hashVert_t
 		return NULL;
 	}
 
+	split.Clear();
+
 	// we probably should find the edge that the vertex is closest to.
 	// it is possible to be < 1 unit away from multiple
 	// edges, but we only want to split by one of them
 	for ( i = 0 ; i < 3 ; i++ ) {
 		v1 = &a->v[i];
 		v2 = &a->v[(i+1)%3];
-		v3 = &a->v[(i+2)%3];
 		VectorSubtract( v2->xyz, v1->xyz, dir );
 		len = dir.Normalize();
 
@@ -614,7 +615,7 @@ void	FixGlobalTjunctions( uEntity_t *e ) {
 				} else {
 					axis.Identity();
 				}
-			}		
+			}
 
 			idVec3	origin = entity->mapEntity->epairs.GetVector( "origin" );
 

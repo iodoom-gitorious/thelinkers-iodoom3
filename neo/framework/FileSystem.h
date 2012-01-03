@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -28,6 +28,9 @@ If you have questions concerning this license or the applicable additional terms
 
 #ifndef __FILESYSTEM_H__
 #define __FILESYSTEM_H__
+
+#include "idlib/containers/StrList.h"
+#include "framework/File.h"
 
 /*
 ===============================================================================
@@ -109,14 +112,14 @@ typedef struct fileDownload_s {
 	void *				buffer;
 } fileDownload_t;
 
-typedef struct backgroundDownload_s {
-	struct backgroundDownload_s	*next;	// set by the fileSystem
+struct backgroundDownload_t {
+	backgroundDownload_t	*next;	// set by the fileSystem
 	dlType_t			opcode;
 	idFile *			f;
 	fileDownload_t		file;
 	urlDownload_t		url;
 	volatile bool		completed;
-} backgroundDownload_t;
+};
 
 // file list for directory listings
 class idFileList {

@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,13 +26,9 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
 
-#include "Simd_Generic.h"
-#include "Simd_MMX.h"
-#include "Simd_3DNow.h"
-
+#include "idlib/math/Simd_3DNow.h"
 
 //===============================================================
 //
@@ -40,7 +36,7 @@ If you have questions concerning this license or the applicable additional terms
 //
 //===============================================================
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 
 /*
 ============
@@ -74,7 +70,7 @@ const char * idSIMD_3DNow::GetName( void ) const {
 // uses the software prefetch instruction to pre-read the data.
 // USE 64 * 1024 FOR THIS VALUE IF YOU'RE ALWAYS FILLING A "CLEAN CACHE"
 
-#define BLOCK_PREFETCH_COPY  infinity // no limit for movq/movntq w/block prefetch 
+#define BLOCK_PREFETCH_COPY  infinity // no limit for movq/movntq w/block prefetch
 #define CACHEBLOCK 80h // number of 64-byte blocks (cache lines) for block prefetch
 // For the largest size blocks, a special technique called Block Prefetch
 // can be used to accelerate the read operations.   Block Prefetch reads
@@ -246,7 +242,7 @@ $memcpy_bp_3:
 	add		esi, 64						// update source pointer
 	movntq	[edi   ], mm0				// write 64 bits, bypassing cache
 	movntq	[edi+ 8], mm1				//    note: movntq also prevents the CPU
-	movntq	[edi+16], mm2				//    from READING the destination address 
+	movntq	[edi+16], mm2				//    from READING the destination address
 	movntq	[edi+24], mm3				//    into the cache, only to be over-written,
 	movntq	[edi+32], mm4				//    so that also helps performance
 	movntq	[edi+40], mm5
@@ -286,12 +282,12 @@ $memcpy_last_few:						// dword aligned from before movsd's
 	jz		$memcpy_final				// no more, let's leave
 	rep		movsb						// the last 1, 2, or 3 bytes
 
-$memcpy_final: 
+$memcpy_final:
 	emms								// clean up the MMX state
 	sfence								// flush the write buffer
 	mov		eax, [dest]					// ret value = destination pointer
 
-    }
+	}
 }
 
-#endif /* _WIN32 */
+#endif /* _MSC_VER */

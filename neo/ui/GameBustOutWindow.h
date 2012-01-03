@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -27,6 +27,8 @@ If you have questions concerning this license or the applicable additional terms
 */
 #ifndef __GAME_BUSTOUT_WINDOW_H__
 #define __GAME_BUSTOUT_WINDOW_H__
+
+#include "ui/Window.h"
 
 class idGameBustOutWindow;
 
@@ -53,7 +55,7 @@ public:
 	bool					fadeOut;
 
 	idGameBustOutWindow *	game;
-	
+
 public:
 							BOEntity(idGameBustOutWindow* _game);
 	virtual					~BOEntity();
@@ -95,7 +97,7 @@ public:
 public:
 					BOBrick();
 					BOBrick( BOEntity *_ent, float _x, float _y, float _width, float _height );
-					~BOBrick();
+	virtual			~BOBrick();
 
 	virtual void	WriteToSaveGame( idFile *savefile );
 	virtual void	ReadFromSaveGame( idFile *savefile, idGameBustOutWindow *game );
@@ -120,7 +122,6 @@ public:
 	virtual const char*	HandleEvent(const sysEvent_t *event, bool *updateVisuals);
 	virtual void		PostParse();
 	virtual void		Draw(int time, float x, float y);
-	virtual const char*	Activate(bool activate);
 	virtual idWinVar *	GetWinVarByName	(const char *_name, bool winLookup = false, drawWin_t** owner = NULL);
 
 	idList<BOEntity*>	entities;

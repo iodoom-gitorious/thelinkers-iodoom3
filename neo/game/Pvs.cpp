@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,13 +26,14 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
+#include "idlib/Timer.h"
 
 #include "Game_local.h"
 
-#define MAX_BOUNDS_AREAS	16
+#include "Pvs.h"
 
+#define MAX_BOUNDS_AREAS	16
 
 typedef struct pvsPassage_s {
 	byte *				canSee;		// bit set for all portals that can be seen through this passage
@@ -258,7 +259,7 @@ void idPVS::FrontPortalPVS( void ) const {
 			}
 
 			for ( p = 0; p < area->numPortals; p++ ) {
-	
+
 				p2 = area->portals[p];
 
 				// if we the whole area is not at the front we need to check
@@ -456,7 +457,7 @@ void idPVS::AddPassageBoundaries( const idWinding &source, const idWinding &pass
 	idPlane		plane;
 
 
-	// check all combinations	
+	// check all combinations
 	for ( i = 0; i < source.GetNumPoints(); i++ ) {
 
 		l = (i + 1) % source.GetNumPoints();
@@ -623,7 +624,7 @@ void idPVS::CreatePassages( void ) const {
 					}
 
 					p = &pvsPortals[(byteNum << 3) + bitNum];
-	
+
 					if ( p->areaNum == source->areaNum ) {
 						continue;
 					}
@@ -841,7 +842,7 @@ void idPVS::Init( void ) {
 
 	timer.Stop();
 
-	gameLocal.Printf( "%5.0f msec to calculate PVS\n", timer.Milliseconds() );
+	gameLocal.Printf( "%5u msec to calculate PVS\n", timer.Milliseconds() );
 	gameLocal.Printf( "%5d areas\n", numAreas );
 	gameLocal.Printf( "%5d portals\n", numPortals );
 	gameLocal.Printf( "%5d areas visible on average\n", totalVisibleAreas / numAreas );
@@ -1419,4 +1420,3 @@ void idPVS::ReadPVS( const pvsHandle_t handle, const idBitMsg &msg ) {
 }
 
 #endif
-

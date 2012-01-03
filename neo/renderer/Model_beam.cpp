@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,11 +26,10 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
+#include "renderer/tr_local.h"
 
-#include "tr_local.h"
-#include "Model_local.h"
+#include "renderer/Model_local.h"
 
 /*
 
@@ -136,8 +135,8 @@ idRenderModel *idRenderModelBeam::InstantiateDynamicModel( const struct renderEn
 	idVec3	localView, localTarget;
 	float	modelMatrix[16];
 	R_AxisToModelMatrix( renderEntity->axis, renderEntity->origin, modelMatrix );
-	R_GlobalPointToLocal( modelMatrix, viewDef->renderView.vieworg, localView ); 
-	R_GlobalPointToLocal( modelMatrix, target, localTarget ); 
+	R_GlobalPointToLocal( modelMatrix, viewDef->renderView.vieworg, localView );
+	R_GlobalPointToLocal( modelMatrix, target, localTarget );
 
 	idVec3	major = localTarget;
 	idVec3	minor;
@@ -202,7 +201,7 @@ idBounds idRenderModelBeam::Bounds( const struct renderEntity_s *renderEntity ) 
 		idVec3	localTarget;
 		float	modelMatrix[16];
 		R_AxisToModelMatrix( renderEntity->axis, renderEntity->origin, modelMatrix );
-		R_GlobalPointToLocal( modelMatrix, target, localTarget ); 
+		R_GlobalPointToLocal( modelMatrix, target, localTarget );
 
 		b.AddPoint( localTarget );
 		if ( renderEntity->shaderParms[SHADERPARM_BEAM_WIDTH] != 0.0f ) {

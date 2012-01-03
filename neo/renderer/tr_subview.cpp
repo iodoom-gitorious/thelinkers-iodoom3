@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,11 +26,9 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
 
-#include "tr_local.h"
-
+#include "renderer/tr_local.h"
 
 typedef struct {
 	idVec3		origin;
@@ -100,7 +98,7 @@ R_PreciseCullSurface
 Check the surface for visibility on a per-triangle basis
 for cases when it is going to be VERY expensive to draw (subviews)
 
-If not culled, also returns the bounding box of the surface in 
+If not culled, also returns the bounding box of the surface in
 Normalized Device Coordinates, so it can be used to crop the scissor rect.
 
 OPTIMIZE: we could also take exact portal passing into consideration
@@ -108,7 +106,6 @@ OPTIMIZE: we could also take exact portal passing into consideration
 */
 bool R_PreciseCullSurface( const drawSurf_t *drawSurf, idBounds &ndcBounds ) {
 	const srfTriangles_t *tri;
-	int numTriangles;
 	idPlane clip, eye;
 	int i, j;
 	unsigned int pointOr;
@@ -150,8 +147,6 @@ bool R_PreciseCullSurface( const drawSurf_t *drawSurf, idBounds &ndcBounds ) {
 	}
 
 	// backface and frustum cull
-	numTriangles = tri->numIndexes / 3;
-
 	R_GlobalPointToLocal( drawSurf->space->modelMatrix, tr.viewDef->renderView.vieworg, localView );
 
 	for ( i = 0; i < tri->numIndexes; i += 3 ) {
@@ -259,7 +254,7 @@ static viewDef_t *R_MirrorViewBySurface( drawSurf_t *drawSurf ) {
 	parms->clipPlanes[0] = -camera.axis[0];
 
 	parms->clipPlanes[0][3] = -( camera.origin * parms->clipPlanes[0].Normal() );
-	
+
 	return parms;
 }
 
@@ -270,7 +265,6 @@ R_XrayViewBySurface
 */
 static viewDef_t *R_XrayViewBySurface( drawSurf_t *drawSurf ) {
 	viewDef_t		*parms;
-	orientation_t	surface, camera;
 	idPlane			originalPlane, plane;
 
 	// copy the viewport size from the original

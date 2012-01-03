@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,16 +26,18 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../idlib/precompiled.h"
-#pragma hdrstop
-
-#include "tr_local.h"
 #ifdef __ppc__
 #include <vecLib/vecLib.h>
 #endif
-#if defined(MACOS_X) && defined(__i386__)
+#if defined(__GNUC__) && defined(__SSE2__)
 #include <xmmintrin.h>
 #endif
+
+#include "sys/platform.h"
+#include "framework/Session.h"
+#include "renderer/RenderWorld_local.h"
+
+#include "renderer/tr_local.h"
 
 //====================================================================
 
@@ -305,7 +307,7 @@ void *R_StaticAlloc( int bytes ) {
 
 	tr.staticAllocCount += bytes;
 
-    buf = Mem_Alloc( bytes );
+	buf = Mem_Alloc( bytes );
 
 	// don't exit on failure on zero length allocations since the old code didn't
 	if ( !buf && ( bytes != 0 ) ) {
@@ -334,7 +336,7 @@ R_StaticFree
 */
 void R_StaticFree( void *data ) {
 	tr.pc.c_free++;
-    Mem_Free( data );
+	Mem_Free( data );
 }
 
 /*
@@ -366,7 +368,7 @@ void *R_FrameAlloc( int bytes ) {
 	frameData_t		*frame;
 	frameMemoryBlock_t	*block;
 	void			*buf;
-    
+
 	bytes = (bytes+16)&~15;
 	// see if it can be satisfied in the current block
 	frame = frameData;
@@ -468,23 +470,23 @@ void R_AxisToModelMatrix( const idMat3 &axis, const idVec3 &origin, float modelM
 // FIXME: these assume no skewing or scaling transforms
 
 void R_LocalPointToGlobal( const float modelMatrix[16], const idVec3 &in, idVec3 &out ) {
-#if defined(MACOS_X) && defined(__i386__)
+#if defined(__GNUC__) && defined(__SSE2__)
 	__m128 m0, m1, m2, m3;
 	__m128 in0, in1, in2;
 	float i0,i1,i2;
 	i0 = in[0];
 	i1 = in[1];
 	i2 = in[2];
-	
+
 	m0 = _mm_loadu_ps(&modelMatrix[0]);
 	m1 = _mm_loadu_ps(&modelMatrix[4]);
 	m2 = _mm_loadu_ps(&modelMatrix[8]);
 	m3 = _mm_loadu_ps(&modelMatrix[12]);
-	
+
 	in0 = _mm_load1_ps(&i0);
 	in1 = _mm_load1_ps(&i1);
 	in2 = _mm_load1_ps(&i2);
-	
+
 	m0 = _mm_mul_ps(m0, in0);
 	m1 = _mm_mul_ps(m1, in1);
 	m2 = _mm_mul_ps(m2, in2);
@@ -492,13 +494,13 @@ void R_LocalPointToGlobal( const float modelMatrix[16], const idVec3 &in, idVec3
 	m0 = _mm_add_ps(m0, m1);
 	m0 = _mm_add_ps(m0, m2);
 	m0 = _mm_add_ps(m0, m3);
-	
+
 	_mm_store_ss(&out[0], m0);
 	m1 = (__m128) _mm_shuffle_epi32((__m128i)m0, 0x55);
 	_mm_store_ss(&out[1], m1);
 	m2 = _mm_movehl_ps(m2, m0);
 	_mm_store_ss(&out[2], m2);
-#else	
+#else
 	out[0] = in[0] * modelMatrix[0] + in[1] * modelMatrix[4]
 		+ in[2] * modelMatrix[8] + modelMatrix[12];
 	out[1] = in[0] * modelMatrix[1] + in[1] * modelMatrix[5]
@@ -688,7 +690,7 @@ void R_TransformModelToClip( const idVec3 &src, const float *modelMatrix, const 
 	int i;
 
 	for ( i = 0 ; i < 4 ; i++ ) {
-		eye[i] = 
+		eye[i] =
 			src[0] * modelMatrix[ i + 0 * 4 ] +
 			src[1] * modelMatrix[ i + 1 * 4 ] +
 			src[2] * modelMatrix[ i + 2 * 4 ] +
@@ -696,7 +698,7 @@ void R_TransformModelToClip( const idVec3 &src, const float *modelMatrix, const 
 	}
 
 	for ( i = 0 ; i < 4 ; i++ ) {
-		dst[i] = 
+		dst[i] =
 			eye[0] * projectionMatrix[ i + 0 * 4 ] +
 			eye[1] * projectionMatrix[ i + 1 * 4 ] +
 			eye[2] * projectionMatrix[ i + 2 * 4 ] +
@@ -720,7 +722,7 @@ void R_GlobalToNormalizedDeviceCoordinates( const idVec3 &global, idVec3 &ndc ) 
 	if ( !tr.viewDef ) {
 
 		for ( i = 0 ; i < 4 ; i ++ ) {
-			view[i] = 
+			view[i] =
 				global[0] * tr.primaryView->worldSpace.modelViewMatrix[ i + 0 * 4 ] +
 				global[1] * tr.primaryView->worldSpace.modelViewMatrix[ i + 1 * 4 ] +
 				global[2] * tr.primaryView->worldSpace.modelViewMatrix[ i + 2 * 4 ] +
@@ -728,7 +730,7 @@ void R_GlobalToNormalizedDeviceCoordinates( const idVec3 &global, idVec3 &ndc ) 
 		}
 
 		for ( i = 0 ; i < 4 ; i ++ ) {
-			clip[i] = 
+			clip[i] =
 				view[0] * tr.primaryView->projectionMatrix[ i + 0 * 4 ] +
 				view[1] * tr.primaryView->projectionMatrix[ i + 1 * 4 ] +
 				view[2] * tr.primaryView->projectionMatrix[ i + 2 * 4 ] +
@@ -738,7 +740,7 @@ void R_GlobalToNormalizedDeviceCoordinates( const idVec3 &global, idVec3 &ndc ) 
 	} else {
 
 		for ( i = 0 ; i < 4 ; i ++ ) {
-			view[i] = 
+			view[i] =
 				global[0] * tr.viewDef->worldSpace.modelViewMatrix[ i + 0 * 4 ] +
 				global[1] * tr.viewDef->worldSpace.modelViewMatrix[ i + 1 * 4 ] +
 				global[2] * tr.viewDef->worldSpace.modelViewMatrix[ i + 2 * 4 ] +
@@ -747,7 +749,7 @@ void R_GlobalToNormalizedDeviceCoordinates( const idVec3 &global, idVec3 &ndc ) 
 
 
 		for ( i = 0 ; i < 4 ; i ++ ) {
-			clip[i] = 
+			clip[i] =
 				view[0] * tr.viewDef->projectionMatrix[ i + 0 * 4 ] +
 				view[1] * tr.viewDef->projectionMatrix[ i + 1 * 4 ] +
 				view[2] * tr.viewDef->projectionMatrix[ i + 2 * 4 ] +

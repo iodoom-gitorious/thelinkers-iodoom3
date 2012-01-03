@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -25,10 +25,11 @@ If you have questions concerning this license or the applicable additional terms
 
 ===========================================================================
 */
-#include "../idlib/precompiled.h"
-#pragma hdrstop
 
-#include "tr_local.h"
+#include "sys/platform.h"
+#include "renderer/VertexCache.h"
+
+#include "renderer/tr_local.h"
 
 /*
 
@@ -78,8 +79,6 @@ typedef struct {
 	int	biTangents;
 
 } atiVertexShaderInfo_t;
-
-static atiVertexShaderInfo_t	vsi;
 
 /*
 ===================
@@ -295,7 +294,7 @@ void RB_R200_DrawInteractions( void ) {
 		if ( vLight->globalShadows || vLight->localShadows ) {
 			backEnd.currentScissor = vLight->scissorRect;
 			if ( r_useScissor.GetBool() ) {
-				qglScissor( backEnd.viewDef->viewport.x1 + backEnd.currentScissor.x1, 
+				qglScissor( backEnd.viewDef->viewport.x1 + backEnd.currentScissor.x1,
 					backEnd.viewDef->viewport.y1 + backEnd.currentScissor.y1,
 					backEnd.currentScissor.x2 + 1 - backEnd.currentScissor.x1,
 					backEnd.currentScissor.y2 + 1 - backEnd.currentScissor.y1 );
@@ -414,7 +413,7 @@ static void R_BuildSurfaceFragmentProgram( int programNum ) {
 
 	// normalize the specular halfangle
 	qglSampleMapATI( GL_REG_5_ATI, GL_TEXTURE4_ARB, GL_SWIZZLE_STR_ATI );
-	
+
 	// R1 = halfangle dot surfaceNormal
 	qglColorFragmentOp2ATI( GL_DOT3_ATI, GL_REG_1_ATI, GL_NONE, GL_SATURATE_BIT_ATI,
 		GL_REG_4_ATI, GL_NONE, GL_2X_BIT_ATI | GL_BIAS_BIT_ATI,

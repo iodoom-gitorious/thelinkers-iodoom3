@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -29,25 +29,21 @@ If you have questions concerning this license or the applicable additional terms
 #ifndef __GAME_LOCAL_H__
 #define	__GAME_LOCAL_H__
 
-/*
-===============================================================================
+#include "GameBase.h"
 
-	Local implementation of the public game interface.
+#include "idlib/containers/StrList.h"
+#include "idlib/containers/LinkList.h"
+#include "idlib/BitMsg.h"
+#include "framework/Game.h"
 
-===============================================================================
-*/
-
-#define LAGO_IMG_WIDTH 64
-#define LAGO_IMG_HEIGHT 64
-#define LAGO_WIDTH	64
-#define LAGO_HEIGHT	44
-#define LAGO_MATERIAL	"textures/sfx/lagometer"
-#define LAGO_IMAGE		"textures/sfx/lagometer.tga"
-
-// if set to 1 the server sends the client PVS with snapshots and the client compares against what it sees
-#ifndef ASYNC_WRITE_PVS
-	#define ASYNC_WRITE_PVS 0
-#endif
+#include "gamesys/SaveGame.h"
+#include "physics/Clip.h"
+#include "physics/Push.h"
+#include "script/Script_Program.h"
+#include "ai/AAS.h"
+#include "anim/Anim.h"
+#include "Pvs.h"
+#include "MultiplayerGame.h"
 
 #ifdef ID_DEBUG_UNINITIALIZED_MEMORY
 // This is real evil but allows the code to inspect arbitrary class variables.
@@ -55,11 +51,20 @@ If you have questions concerning this license or the applicable additional terms
 #define protected	public
 #endif
 
+/*
+===============================================================================
+
+	Local implementation of the public game interface.
+
+===============================================================================
+*/
+class idDeclEntityDef;
+class idRenderWorld;
+class idSoundWorld;
+class idUserInterface;
+
 extern idRenderWorld *				gameRenderWorld;
 extern idSoundWorld *				gameSoundWorld;
-
-// the "gameversion" client command will print this plus compile date
-#define	GAME_VERSION		"baseDOOM-1"
 
 // classes used by idGameLocal
 class idEntity;
@@ -68,53 +73,29 @@ class idPlayer;
 class idCamera;
 class idWorldspawn;
 class idTestModel;
-class idAAS;
-class idAI;
 class idSmokeParticles;
 class idEntityFx;
 class idTypeInfo;
-class idProgram;
 class idThread;
 class idEditEntities;
 class idLocationEntity;
 
-#define	MAX_CLIENTS				32
-#define	GENTITYNUM_BITS			12
-#define	MAX_GENTITIES			(1<<GENTITYNUM_BITS)
-#define	ENTITYNUM_NONE			(MAX_GENTITIES-1)
-#define	ENTITYNUM_WORLD			(MAX_GENTITIES-2)
-#define	ENTITYNUM_MAX_NORMAL	(MAX_GENTITIES-2)
-
 //============================================================================
+extern const int NUM_RENDER_PORTAL_BITS;
 
 void gameError( const char *fmt, ... );
 
-#include "gamesys/Event.h"
-#include "gamesys/Class.h"
-#include "gamesys/SysCvar.h"
-#include "gamesys/SysCmds.h"
-#include "gamesys/SaveGame.h"
-#include "gamesys/DebugGraph.h"
+extern idRenderWorld *				gameRenderWorld;
+extern idSoundWorld *				gameSoundWorld;
 
-#include "script/Script_Program.h"
+extern const int NUM_RENDER_PORTAL_BITS;
+/*
+===============================================================================
 
-#include "anim/Anim.h"
+	Local implementation of the public game interface.
 
-#include "ai/AAS.h"
-
-#include "physics/Clip.h"
-#include "physics/Push.h"
-
-#include "Pvs.h"
-#include "MultiplayerGame.h"
-
-//============================================================================
-
-const int MAX_GAME_MESSAGE_SIZE		= 8192;
-const int MAX_ENTITY_STATE_SIZE		= 512;
-const int ENTITY_PVS_SIZE			= ((MAX_GENTITIES+31)>>5);
-const int NUM_RENDER_PORTAL_BITS	= idMath::BitsForInteger( PS_BLOCK_ALL );
-
+===============================================================================
+*/
 typedef struct entityState_s {
 	int						entityNumber;
 	idBitMsg				state;
@@ -181,8 +162,8 @@ typedef struct {
 	idEntity	*ent;
 	int			dist;
 #ifdef CTF
-	int			team;			
-#endif    
+	int			team;
+#endif
 } spawnSpot_t;
 
 //============================================================================
@@ -286,7 +267,7 @@ public:
 	idDict					persistentLevelInfo;	// contains args that are kept around between levels
 
 	// can be used to automatically effect every material in the world that references globalParms
-	float					globalShaderParms[ MAX_GLOBAL_SHADER_PARMS ];	
+	float					globalShaderParms[ MAX_GLOBAL_SHADER_PARMS ];
 
 	idRandom				random;					// random number generator used throughout the game
 
@@ -300,7 +281,7 @@ public:
 	idTestModel *			testmodel;				// for development testing of models
 	idEntityFx *			testFx;					// for development testing of fx
 
-	idStr					sessionCommand;			// a target_sessionCommand can set this to return something to the session 
+	idStr					sessionCommand;			// a target_sessionCommand can set this to return something to the session
 
 	idMultiplayerGame		mpGame;					// handles rules for standard dm
 
@@ -694,7 +675,7 @@ ID_INLINE bool idEntityPtr<type>::IsValid( void ) const {
 template< class type >
 ID_INLINE type *idEntityPtr<type>::GetEntity( void ) const {
 	int entityNum = spawnId & ( ( 1 << GENTITYNUM_BITS ) - 1 );
-	if ( ( gameLocal.spawnIds[ entityNum ] == ( spawnId >> GENTITYNUM_BITS ) ) ) {
+	if ( gameLocal.spawnIds[ entityNum ] == ( spawnId >> GENTITYNUM_BITS ) ) {
 		return static_cast<type *>( gameLocal.entities[ entityNum ] );
 	}
 	return NULL;
@@ -730,79 +711,8 @@ typedef enum {
 	SND_CHANNEL_DAMAGE
 } gameSoundChannel_t;
 
-// content masks
-#define	MASK_ALL					(-1)
-#define	MASK_SOLID					(CONTENTS_SOLID)
-#define	MASK_MONSTERSOLID			(CONTENTS_SOLID|CONTENTS_MONSTERCLIP|CONTENTS_BODY)
-#define	MASK_PLAYERSOLID			(CONTENTS_SOLID|CONTENTS_PLAYERCLIP|CONTENTS_BODY)
-#define	MASK_DEADSOLID				(CONTENTS_SOLID|CONTENTS_PLAYERCLIP)
-#define	MASK_WATER					(CONTENTS_WATER)
-#define	MASK_OPAQUE					(CONTENTS_OPAQUE)
-#define	MASK_SHOT_RENDERMODEL		(CONTENTS_SOLID|CONTENTS_RENDERMODEL)
-#define	MASK_SHOT_BOUNDINGBOX		(CONTENTS_SOLID|CONTENTS_BODY)
-
-const float DEFAULT_GRAVITY			= 1066.0f;
-#define DEFAULT_GRAVITY_STRING		"1066"
-const idVec3 DEFAULT_GRAVITY_VEC3( 0, 0, -DEFAULT_GRAVITY );
-
-const int	CINEMATIC_SKIP_DELAY	= SEC2MS( 2.0f );
-
-//============================================================================
-
-#include "physics/Force.h"
-#include "physics/Force_Constant.h"
-#include "physics/Force_Drag.h"
-#ifdef _D3XP
-#include "physics/Force_Grab.h"
-#endif
-#include "physics/Force_Field.h"
-#include "physics/Force_Spring.h"
-#include "physics/Physics.h"
-#include "physics/Physics_Static.h"
-#include "physics/Physics_StaticMulti.h"
-#include "physics/Physics_Base.h"
-#include "physics/Physics_Actor.h"
-#include "physics/Physics_Monster.h"
-#include "physics/Physics_Player.h"
-#include "physics/Physics_Parametric.h"
-#include "physics/Physics_RigidBody.h"
-#include "physics/Physics_AF.h"
-
-#include "SmokeParticles.h"
-
-#include "Entity.h"
-#include "GameEdit.h"
-#ifdef _D3XP
-#include "Grabber.h"
-#endif
-#include "AF.h"
-#include "IK.h"
-#include "AFEntity.h"
-#include "Misc.h"
-#include "Actor.h"
-#include "Projectile.h"
-#include "Weapon.h"
-#include "Light.h"
-#include "WorldSpawn.h"
-#include "Item.h"
-#include "PlayerView.h"
-#include "PlayerIcon.h"
-#include "Player.h"
-#include "Mover.h"
-#include "Camera.h"
-#include "Moveable.h"
-#include "Target.h"
-#include "Trigger.h"
-#include "Sound.h"
-#include "Fx.h"
-#include "SecurityCamera.h"
-#include "BrittleFracture.h"
-
-#include "ai/AI.h"
-#include "anim/Anim_Testmodel.h"
-
-#include "script/Script_Compiler.h"
-#include "script/Script_Interpreter.h"
-#include "script/Script_Thread.h"
+extern const float	DEFAULT_GRAVITY;
+extern const idVec3	DEFAULT_GRAVITY_VEC3;
+extern const int	CINEMATIC_SKIP_DELAY;
 
 #endif	/* !__GAME_LOCAL_H__ */

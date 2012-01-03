@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,11 +26,17 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
+#include "idlib/geometry/JointTransform.h"
+#include "renderer/ModelManager.h"
 
-#include "Game_local.h"
+#include "gamesys/SysCvar.h"
+#include "Item.h"
+#include "Player.h"
+#include "Fx.h"
+#include "SmokeParticles.h"
 
+#include "AFEntity.h"
 
 /*
 ===============================================================================
@@ -371,9 +377,9 @@ idAFAttachment::Damage
 Pass damage to body at the bindjoint
 ============
 */
-void idAFAttachment::Damage( idEntity *inflictor, idEntity *attacker, const idVec3 &dir, 
+void idAFAttachment::Damage( idEntity *inflictor, idEntity *attacker, const idVec3 &dir,
 	const char *damageDefName, const float damageScale, const int location ) {
-	
+
 	if ( body ) {
 		body->Damage( inflictor, attacker, dir, damageDefName, damageScale, attachJoint );
 	}
@@ -1705,7 +1711,7 @@ void idAFEntity_Vehicle::Spawn( void ) {
 	steeringWheelJoint = animator.GetJointHandle( steeringWheelJointName );
 
 	spawnArgs.GetFloat( "wheelRadius", "20", wheelRadius );
-	spawnArgs.GetFloat( "steerSpeed", "5", steerSpeed ); 
+	spawnArgs.GetFloat( "steerSpeed", "5", steerSpeed );
 
 	player = NULL;
 	steerAngle = 0.0f;
@@ -3116,7 +3122,7 @@ idRenderModel *idGameEdit::AF_CreateMesh( const idDict &args, idVec3 &meshOrigin
 			modifiedAxis[ jointNum ] = ( bodyAxis[i] * originalJoints[jointNum].ToMat3().Transpose() ).Transpose() * ( newBodyAxis[i] * meshAxis.Transpose() );
 			// FIXME: calculate correct modifiedOrigin
 			modifiedOrigin[ jointNum ] = originalJoints[ jointNum ].ToVec3();
- 		}
+		}
 	}
 
 	// apply joint modifications to the skeleton
@@ -3184,7 +3190,7 @@ idHarvestable::~idHarvestable() {
 }
 
 void idHarvestable::Spawn() {
-	
+
 	startTime = 0;
 
 	spawnArgs.GetFloat( "triggersize", "120", triggersize );
@@ -3197,13 +3203,13 @@ void idHarvestable::Spawn() {
 	fxFollowPlayer = spawnArgs.GetBool("fx_follow_player", "1");
 	fxOrient = spawnArgs.GetString("fx_orient");
 
-	
+
 }
 
 void idHarvestable::Init(idEntity* parent) {
 
 	assert(parent);
-	
+
 	parentEnt = parent;
 
 	GetPhysics()->SetOrigin( parent->GetPhysics()->GetOrigin() );
@@ -3214,8 +3220,8 @@ void idHarvestable::Init(idEntity* parent) {
 	if(skin.Length()) {
 		parent->SetSkin(declManager->FindSkin(skin.c_str()));
 	}
-	
-	idEntity* head;
+
+	idEntity* head = NULL;
 	if(parent->IsType(idActor::Type)) {
 		idActor* withHead = (idActor*)parent;
 		head = withHead->GetHeadEntity();
@@ -3270,7 +3276,7 @@ void idHarvestable::Restore( idRestoreGame *savefile ) {
 	savefile->ReadBool( fxFollowPlayer );
 	fx.Restore( savefile );
 	savefile->ReadString( fxOrient );
-	
+
 	parentEnt.Restore(savefile);
 }
 
@@ -3302,7 +3308,7 @@ void idHarvestable::Think() {
 		parent->PostEventMS( &EV_Remove, 0 );
 		PostEventMS( &EV_Remove, 0 );
 	}
-	
+
 	if(fxFollowPlayer) {
 		idEntityFx* fxEnt = fx.GetEntity();
 
@@ -3339,12 +3345,12 @@ idAFEntity_Harvest::BeginBurn
 ================
 */
 void idHarvestable::BeginBurn() {
-	
+
 	idEntity* parent = parentEnt.GetEntity();
 	if(!parent) {
 		return;
 	}
-	
+
 	if(!spawnArgs.GetBool("burn")) {
 		return;
 	}
@@ -3358,7 +3364,7 @@ void idHarvestable::BeginBurn() {
 	parent->GetRenderEntity()->noShadow = true;
 	parent->SetShaderParm( SHADERPARM_TIME_OF_DEATH, gameLocal.slow.time * 0.001f );
 
-	idEntity* head;
+	idEntity* head = NULL;
 	if(parent->IsType(idActor::Type)) {
 		idActor* withHead = (idActor*)parent;
 		head = withHead->GetHeadEntity();
@@ -3377,8 +3383,8 @@ void idHarvestable::BeginBurn() {
 		head->SetShaderParm( SHADERPARM_TIME_OF_DEATH, gameLocal.slow.time * 0.001f );
 	}
 
-	
-	
+
+
 }
 
 /*
@@ -3406,7 +3412,7 @@ idAFEntity_Harvest::CalcTriggerBounds
 ================
 */
 void idHarvestable::CalcTriggerBounds( float size, idBounds &bounds ) {
-	
+
 	idEntity* parent = parentEnt.GetEntity();
 	if(!parent) {
 		return;
@@ -3420,12 +3426,12 @@ void idHarvestable::CalcTriggerBounds( float size, idBounds &bounds ) {
 }
 
 bool idHarvestable::GetFxOrientationAxis(idMat3& mat) {
-	
+
 	idEntity* parent = parentEnt.GetEntity();
 	if(!parent) {
 		return false;
 	}
-	
+
 	idPlayer *thePlayer = player.GetEntity();
 
 	if(!fxOrient.Icmp("up")) {
@@ -3466,7 +3472,7 @@ bool idHarvestable::GetFxOrientationAxis(idMat3& mat) {
 		//Orient the fx towards the eye of the player
 		idVec3 eye = thePlayer->GetEyePosition();
 		idVec3 toPlayer = eye-parent->GetPhysics()->GetOrigin();
-		
+
 		toPlayer.Normalize();
 
 		idVec3 left, up;
@@ -3613,11 +3619,11 @@ idAFEntity_Harvest::~idAFEntity_Harvest
 ================
 */
 idAFEntity_Harvest::~idAFEntity_Harvest() {
-	
+
 	if ( harvestEnt.GetEntity() ) {
 		harvestEnt.GetEntity()->PostEventMS( &EV_Remove, 0 );
 	}
-	
+
 }
 
 /*

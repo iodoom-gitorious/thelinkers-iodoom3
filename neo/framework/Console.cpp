@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,8 +26,19 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
+#include "idlib/math/Vector.h"
+#include "framework/async/AsyncNetwork.h"
+#include "framework/BuildVersion.h"
+#include "framework/CVarSystem.h"
+#include "framework/Session.h"
+#include "framework/EditField.h"
+#include "framework/KeyInput.h"
+#include "framework/EventLoop.h"
+#include "renderer/RenderSystem.h"
+#include "sound/sound.h"
+
+#include "framework/Console.h"
 
 void SCR_DrawTextLeftAlign( float &y, const char *text, ... ) id_attribute((format(printf,2,3)));
 void SCR_DrawTextRightAlign( float &y, const char *text, ... ) id_attribute((format(printf,2,3)));
@@ -224,7 +235,7 @@ SCR_DrawMemoryUsage
 */
 float SCR_DrawMemoryUsage( float y ) {
 	memoryStats_t allocs, frees;
-	
+
 	Mem_GetStats( allocs );
 	SCR_DrawTextRightAlign( y, "total allocated memory: %4d, %4dkB", allocs.num, allocs.totalSize>>10 );
 
@@ -564,7 +575,7 @@ Handles history and console scrollback
 ====================
 */
 void idConsoleLocal::KeyDownEvent( int key ) {
-	
+
 	// Execute F key bindings
 	if ( key >= K_F1 && key <= K_F12 ) {
 		idKeyInput::ExecKeyBinding( key );
@@ -1004,7 +1015,7 @@ void idConsoleLocal::DrawNotify() {
 			continue;
 		}
 		text_p = text + (i % TOTAL_LINES)*LINE_WIDTH;
-		
+
 		for ( x = 0; x < LINE_WIDTH; x++ ) {
 			if ( ( text_p[x] & 0xff ) == ' ' ) {
 				continue;
@@ -1067,7 +1078,7 @@ void idConsoleLocal::DrawSolidConsole( float frac ) {
 	i = version.Length();
 
 	for ( x = 0; x < i; x++ ) {
-		renderSystem->DrawSmallChar( SCREEN_WIDTH - ( i - x ) * SMALLCHAR_WIDTH, 
+		renderSystem->DrawSmallChar( SCREEN_WIDTH - ( i - x ) * SMALLCHAR_WIDTH,
 			(lines-(SMALLCHAR_HEIGHT+SMALLCHAR_HEIGHT/2)), version[x], localConsole.charSetShader );
 
 	}
@@ -1089,7 +1100,7 @@ void idConsoleLocal::DrawSolidConsole( float frac ) {
 		y -= SMALLCHAR_HEIGHT;
 		rows--;
 	}
-	
+
 	row = display;
 
 	if ( x == 0 ) {
@@ -1105,7 +1116,7 @@ void idConsoleLocal::DrawSolidConsole( float frac ) {
 		}
 		if ( current - row >= TOTAL_LINES ) {
 			// past scrollback wrap point
-			continue;	
+			continue;
 		}
 
 		text_p = text + (row % TOTAL_LINES)*LINE_WIDTH;
@@ -1145,7 +1156,7 @@ void	idConsoleLocal::Draw( bool forceFullScreen ) {
 	}
 
 	if ( forceFullScreen ) {
-		// if we are forced full screen because of a disconnect, 
+		// if we are forced full screen because of a disconnect,
 		// we want the console closed when we go back to a session state
 		Close();
 		// we are however catching keyboard input

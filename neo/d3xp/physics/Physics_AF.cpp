@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,10 +26,16 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
+#include "idlib/math/Quat.h"
+#include "idlib/Timer.h"
 
-#include "../Game_local.h"
+#include "gamesys/SysCvar.h"
+#include "Entity.h"
+#include "Player.h"
+#include "WorldSpawn.h"
+
+#include "physics/Physics_AF.h"
 
 CLASS_DECLARATION( idPhysics_Base, idPhysics_AF )
 END_CLASS
@@ -633,6 +639,7 @@ void idAFConstraint_BallAndSocketJoint::Evaluate( float invTimeStep ) {
 		c1.SubVec3(0) = -( invTimeStep * ERROR_REDUCTION ) * ( a2 + master->GetWorldOrigin() - ( a1 + body1->GetWorldOrigin() ) );
 	}
 	else {
+		a2.Zero();
 		c1.SubVec3(0) = -( invTimeStep * ERROR_REDUCTION ) * ( anchor2 - ( a1 + body1->GetWorldOrigin() ) );
 	}
 
@@ -992,7 +999,7 @@ idAFConstraint_UniversalJoint::SetShafts
 */
 void idAFConstraint_UniversalJoint::SetShafts( const idVec3 &cardanShaft1, const idVec3 &cardanShaft2 ) {
 	idVec3 cardanAxis;
-	float l;
+	float l id_attribute((unused));
 
 	shaft1 = cardanShaft1;
 	l = shaft1.Normalize();
@@ -1301,12 +1308,12 @@ void idAFConstraint_UniversalJoint::DebugDraw( void ) {
 	d1 = axis1 * body1->GetWorldAxis();
 
 	if ( master ) {
-        a2 = master->GetWorldOrigin() + anchor2 * master->GetWorldAxis();
+		a2 = master->GetWorldOrigin() + anchor2 * master->GetWorldAxis();
 		s2 = shaft2 * master->GetWorldAxis();
 		d2 = axis2 * master->GetWorldAxis();
 	}
 	else {
-        a2 = anchor2;
+		a2 = anchor2;
 		s2 = shaft2;
 		d2 = axis2;
 	}
@@ -4481,7 +4488,7 @@ idAFTree::Factor
 void idAFTree::Factor( void ) const {
 	int i, j;
 	idAFBody *body;
-	idAFConstraint *child;
+	idAFConstraint *child = NULL;
 	idMatX childI;
 
 	childI.SetData( 6, 6, MATX_ALLOCA( 6 * 6 ) );
@@ -5337,7 +5344,7 @@ void idPhysics_AF::Evolve( float timeStep ) {
 	idVec6 force;
 	idRotation rotation;
 	float vSqr, maxLinearVelocity, maxAngularVelocity;
-	
+
 	maxLinearVelocity = af_maxLinearVelocity.GetFloat() / timeStep;
 	maxAngularVelocity = af_maxAngularVelocity.GetFloat() / timeStep;
 
@@ -6375,7 +6382,7 @@ bool idPhysics_AF::Evaluate( int timeStepMSec, int endTimeMSec ) {
 	timer_total.Stop();
 
 	if ( af_showTimings.GetInteger() == 1 ) {
-		gameLocal.Printf( "%12s: t %1.4f pc %2d, %1.4f ac %2d %1.4f lcp %1.4f cd %1.4f\n",
+		gameLocal.Printf( "%12s: t %u pc %2d, %u ac %2d %u lcp %u cd %u\n",
 						self->name.c_str(),
 						timer_total.Milliseconds(),
 						numPrimary, timer_pc.Milliseconds(),
@@ -6385,7 +6392,7 @@ bool idPhysics_AF::Evaluate( int timeStepMSec, int endTimeMSec ) {
 	else if ( af_showTimings.GetInteger() == 2 ) {
 		numArticulatedFigures++;
 		if ( endTimeMSec > lastTimerReset ) {
-			gameLocal.Printf( "af %d: t %1.4f pc %2d, %1.4f ac %2d %1.4f lcp %1.4f cd %1.4f\n",
+			gameLocal.Printf( "af %d: t %u pc %2d, %u ac %2d %u lcp %u cd %u\n",
 							numArticulatedFigures,
 							timer_total.Milliseconds(),
 							numPrimary, timer_pc.Milliseconds(),
@@ -7904,10 +7911,10 @@ const float	AF_VELOCITY_MAX				= 16000;
 const int	AF_VELOCITY_TOTAL_BITS		= 16;
 const int	AF_VELOCITY_EXPONENT_BITS	= idMath::BitsForInteger( idMath::BitsForFloat( AF_VELOCITY_MAX ) ) + 1;
 const int	AF_VELOCITY_MANTISSA_BITS	= AF_VELOCITY_TOTAL_BITS - 1 - AF_VELOCITY_EXPONENT_BITS;
-const float	AF_FORCE_MAX				= 1e20f;
-const int	AF_FORCE_TOTAL_BITS			= 16;
-const int	AF_FORCE_EXPONENT_BITS		= idMath::BitsForInteger( idMath::BitsForFloat( AF_FORCE_MAX ) ) + 1;
-const int	AF_FORCE_MANTISSA_BITS		= AF_FORCE_TOTAL_BITS - 1 - AF_FORCE_EXPONENT_BITS;
+//const float	AF_FORCE_MAX				= 1e20f;
+//const int	AF_FORCE_TOTAL_BITS			= 16;
+//const int	AF_FORCE_EXPONENT_BITS		= idMath::BitsForInteger( idMath::BitsForFloat( AF_FORCE_MAX ) ) + 1;
+//const int	AF_FORCE_MANTISSA_BITS		= AF_FORCE_TOTAL_BITS - 1 - AF_FORCE_EXPONENT_BITS;
 
 /*
 ================
@@ -7962,7 +7969,7 @@ idPhysics_AF::ReadFromSnapshot
 ================
 */
 void idPhysics_AF::ReadFromSnapshot( const idBitMsgDelta &msg ) {
-	int i, num;
+	int i, num id_attribute((unused));
 	idCQuat quat;
 
 	current.atRest = msg.ReadLong();

@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,13 +26,16 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
+#include "idlib/math/Interpolate.h"
+#include "framework/Game.h"
+#include "renderer/VertexCache.h"
+#include "renderer/RenderWorld_local.h"
+#include "ui/Window.h"
 
-#include "tr_local.h"
+#include "renderer/tr_local.h"
 
 static const float CHECK_BOUNDS_EPSILON = 1.0f;
-
 
 /*
 ===========================================================================================
@@ -580,7 +583,7 @@ void idRenderWorldLocal::CreateLightDefInteractions( idRenderLightLocal *ldef ) 
 			}
 
 			// if any of the edef's interaction match this light, we don't
-			// need to consider it. 
+			// need to consider it.
 			if ( r_useInteractionTable.GetBool() && this->interactionTable ) {
 				// allocating these tables may take several megs on big maps, but it saves 3% to 5% of
 				// the CPU time.  The table is updated at interaction::AllocAndLink() and interaction::UnlinkAndFree()
@@ -655,7 +658,7 @@ void idRenderWorldLocal::CreateLightDefInteractions( idRenderLightLocal *ldef ) 
 R_LinkLightSurf
 =================
 */
-void R_LinkLightSurf( const drawSurf_t **link, const srfTriangles_t *tri, const viewEntity_t *space, 
+void R_LinkLightSurf( const drawSurf_t **link, const srfTriangles_t *tri, const viewEntity_t *space,
 				   const idRenderLightLocal *light, const idMaterial *shader, const idScreenRect &scissor, bool viewInsideShadow ) {
 	drawSurf_t		*drawSurf;
 
@@ -896,7 +899,7 @@ void R_AddLightSurfaces( void ) {
 				light->viewCount = -1;
 				continue;
 			}
-			if ( light->parms.allowLightInViewID 
+			if ( light->parms.allowLightInViewID
 			&& light->parms.allowLightInViewID != tr.viewDef->renderView.viewID ) {
 				*ptr = vLight->next;
 				light->viewCount = -1;
@@ -1060,8 +1063,9 @@ R_IssueEntityDefCallback
 bool R_IssueEntityDefCallback( idRenderEntityLocal *def ) {
 	bool update;
 	idBounds	oldBounds;
+	const bool checkBounds = r_checkBounds.GetBool();
 
-	if ( r_checkBounds.GetBool() ) {
+	if ( checkBounds ) {
 		oldBounds = def->referenceBounds;
 	}
 
@@ -1075,9 +1079,10 @@ bool R_IssueEntityDefCallback( idRenderEntityLocal *def ) {
 
 	if ( !def->parms.hModel ) {
 		common->Error( "R_IssueEntityDefCallback: dynamic entity callback didn't set model" );
+		return false;
 	}
 
-	if ( r_checkBounds.GetBool() ) {
+	if ( checkBounds ) {
 		if (	oldBounds[0][0] > def->referenceBounds[0][0] + CHECK_BOUNDS_EPSILON ||
 				oldBounds[0][1] > def->referenceBounds[0][1] + CHECK_BOUNDS_EPSILON ||
 				oldBounds[0][2] > def->referenceBounds[0][2] + CHECK_BOUNDS_EPSILON ||
@@ -1248,8 +1253,8 @@ void R_AddDrawSurf( const srfTriangles_t *tri, const viewEntity_t *space, const 
 			shaderParms = renderEntity->shaderParms;
 		}
 
-		float oldFloatTime;
-		int oldTime;
+		float oldFloatTime = 0.0f;
+		int oldTime = 0;
 
 		if ( space->entityDef && space->entityDef->parms.timeGroup ) {
 			oldFloatTime = tr.viewDef->floatTime;
@@ -1369,7 +1374,7 @@ static void R_AddAmbientDrawsurfs( viewEntity_t *vEntity ) {
 
 		R_GlobalShaderOverride( &shader );
 
-		if ( !shader ) {	
+		if ( !shader ) {
 			continue;
 		}
 		if ( !shader->IsDrawn() ) {
@@ -1481,8 +1486,8 @@ void R_AddModelSurfaces( void ) {
 			}
 		}
 
-		float oldFloatTime;
-		int oldTime;
+		float oldFloatTime = 0.0f;
+		int oldTime = 0;
 
 		game->SelectTimeGroup( vEntity->entityDef->parms.timeGroup );
 

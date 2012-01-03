@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -34,7 +34,7 @@ If you have questions concerning this license or the applicable additional terms
 
 #if defined( _WIN32 )
 
-#include <gl/gl.h>
+#include <GL/gl.h>
 
 #elif defined( MACOS_X )
 
@@ -42,7 +42,7 @@ If you have questions concerning this license or the applicable additional terms
 #define GL_GLEXT_LEGACY
 #include <OpenGL/gl.h>
 
-#elif defined( __linux__ )
+#elif defined( __unix__ )
 
 // using our local glext.h
 // http://oss.sgi.com/projects/ogl-sample/ABI/
@@ -111,7 +111,7 @@ extern	void ( APIENTRY *qglCombinerParameterfNV )( GLenum pname, const GLfloat p
 extern	void ( APIENTRY *qglCombinerParameteriNV )( GLenum pname, const GLint param );
 extern	void ( APIENTRY *qglCombinerInputNV )( GLenum stage, GLenum portion, GLenum variable, GLenum input,
 											  GLenum mapping, GLenum componentUsage );
-extern	void ( APIENTRY *qglCombinerOutputNV )( GLenum stage, GLenum portion, GLenum abOutput, GLenum cdOutput, 
+extern	void ( APIENTRY *qglCombinerOutputNV )( GLenum stage, GLenum portion, GLenum abOutput, GLenum cdOutput,
 											   GLenum sumOutput, GLenum scale, GLenum bias, GLboolean abDotProduct,
 											   GLboolean cdDotProduct, GLboolean muxSum );
 extern	void ( APIENTRY *qglFinalCombinerInputNV )( GLenum variable, GLenum input, GLenum mapping, GLenum componentUsage );
@@ -166,7 +166,7 @@ extern PFNGLDEPTHBOUNDSEXTPROC              qglDepthBoundsEXT;
 //===========================================================================
 
 // non-windows systems will just redefine qgl* to gl*
-#if defined( __APPLE__ ) || defined( ID_GL_HARDLINK )
+#ifndef _WIN32
 
 #include "qgl_linked.h"
 
@@ -511,8 +511,6 @@ extern  void ( APIENTRY * qglVertex4sv )(const GLshort *v);
 extern  void ( APIENTRY * qglVertexPointer )(GLint size, GLenum type, GLsizei stride, const GLvoid *pointer);
 extern  void ( APIENTRY * qglViewport )(GLint x, GLint y, GLsizei width, GLsizei height);
 
-#if defined( _WIN32 )
-
 extern  int   ( WINAPI * qwglChoosePixelFormat )(HDC, CONST PIXELFORMATDESCRIPTOR *);
 extern  int   ( WINAPI * qwglDescribePixelFormat) (HDC, int, UINT, LPPIXELFORMATDESCRIPTOR);
 extern  int   ( WINAPI * qwglGetPixelFormat)(HDC);
@@ -531,37 +529,17 @@ extern BOOL  ( WINAPI * qwglShareLists)(HGLRC, HGLRC);
 extern BOOL  ( WINAPI * qwglUseFontBitmaps)(HDC, DWORD, DWORD, DWORD);
 
 extern BOOL  ( WINAPI * qwglUseFontOutlines)(HDC, DWORD, DWORD, DWORD, FLOAT,
-                                           FLOAT, int, LPGLYPHMETRICSFLOAT);
+										   FLOAT, int, LPGLYPHMETRICSFLOAT);
 
 extern BOOL ( WINAPI * qwglDescribeLayerPlane)(HDC, int, int, UINT,
-                                            LPLAYERPLANEDESCRIPTOR);
+											LPLAYERPLANEDESCRIPTOR);
 extern int  ( WINAPI * qwglSetLayerPaletteEntries)(HDC, int, int, int,
-                                                CONST COLORREF *);
+												CONST COLORREF *);
 extern int  ( WINAPI * qwglGetLayerPaletteEntries)(HDC, int, int, int,
-                                                COLORREF *);
+												COLORREF *);
 extern BOOL ( WINAPI * qwglRealizeLayerPalette)(HDC, int, BOOL);
 extern BOOL ( WINAPI * qwglSwapLayerBuffers)(HDC, UINT);
 
 #endif	// _WIN32
-
-#if defined( __linux__ )
-
-//GLX Functions
-extern XVisualInfo * (*qglXChooseVisual)( Display *dpy, int screen, int *attribList );
-extern GLXContext (*qglXCreateContext)( Display *dpy, XVisualInfo *vis, GLXContext shareList, Bool direct );
-extern void (*qglXDestroyContext)( Display *dpy, GLXContext ctx );
-extern Bool (*qglXMakeCurrent)( Display *dpy, GLXDrawable drawable, GLXContext ctx);
-extern void (*qglXSwapBuffers)( Display *dpy, GLXDrawable drawable );
-extern GLExtension_t (*qglXGetProcAddressARB)( const GLubyte *procname );
-
-// make sure the code is correctly using qgl everywhere
-// don't enable that when building glimp itself obviously..
-#if !defined( GLIMP )
-	#include "../sys/linux/qgl_enforce.h"
-#endif
-
-#endif // __linux__
-
-#endif	// hardlinlk vs dlopen
 
 #endif

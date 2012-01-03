@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,10 +26,13 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
+#include "idlib/geometry/JointTransform.h"
+#include "idlib/math/Quat.h"
 
-#include "../Game_local.h"
+#include "Game_local.h"
+
+#include "anim/Anim.h"
 
 bool idAnimManager::forceExport = false;
 
@@ -216,7 +219,7 @@ bool idMD5Anim::LoadAnim( const char *filename ) {
 	for( i = 0; i < numJoints; i++ ) {
 		parser.ReadToken( &token );
 		jointInfo[ i ].nameIndex = animationLib.JointIndex( token );
-		
+
 		// parse parent num
 		jointInfo[ i ].parentNum = parser.ParseInt();
 		if ( jointInfo[ i ].parentNum >= i ) {
@@ -278,7 +281,7 @@ bool idMD5Anim::LoadAnim( const char *filename ) {
 			parser.Error( "Expected frame number %d", i );
 		}
 		parser.ExpectTokenString( "{" );
-		
+
 		for( j = 0; j < numAnimatedComponents; j++, componentPtr++ ) {
 			*componentPtr = parser.ParseFloat();
 		}
@@ -402,7 +405,7 @@ void idMD5Anim::ConvertTimeToFrame( int time, int cyclecount, frameBlend_t &fram
 		frame.cycleCount	= 0;
 		return;
 	}
-	
+
 	frameTime			= time * frameRate;
 	frameNum			= frameTime / 1000;
 	frame.cycleCount	= frameNum / ( numFrames - 1 );
@@ -415,7 +418,7 @@ void idMD5Anim::ConvertTimeToFrame( int time, int cyclecount, frameBlend_t &fram
 		frame.frontlerp		= 1.0f;
 		return;
 	}
-	
+
 	frame.frame1 = frameNum % ( numFrames - 1 );
 	frame.frame2 = frame.frame1 + 1;
 	if ( frame.frame2 >= numFrames ) {
@@ -436,7 +439,7 @@ void idMD5Anim::GetOrigin( idVec3 &offset, int time, int cyclecount ) const {
 
 	offset = baseFrame[ 0 ].t;
 	if ( !( jointInfo[ 0 ].animBits & ( ANIM_TX | ANIM_TY | ANIM_TZ ) ) ) {
-		// just use the baseframe		
+		// just use the baseframe
 		return;
 	}
 
@@ -474,10 +477,10 @@ idMD5Anim::GetOriginRotation
 void idMD5Anim::GetOriginRotation( idQuat &rotation, int time, int cyclecount ) const {
 	frameBlend_t	frame;
 	int				animBits;
-	
+
 	animBits = jointInfo[ 0 ].animBits;
 	if ( !( animBits & ( ANIM_QX | ANIM_QY | ANIM_QZ ) ) ) {
-		// just use the baseframe		
+		// just use the baseframe
 		rotation = baseFrame[ 0 ].q;
 		return;
 	}
@@ -1046,7 +1049,7 @@ void idAnimManager::ListAnims( void ) const {
 		if ( animptr && *animptr ) {
 			anim = *animptr;
 			s = anim->Size();
-			gameLocal.Printf( "%8d bytes : %2d refs : %s\n", s, anim->NumRefs(), anim->Name() );
+			gameLocal.Printf( "%8zd bytes : %2d refs : %s\n", s, anim->NumRefs(), anim->Name() );
 			size += s;
 			num++;
 		}
@@ -1057,8 +1060,8 @@ void idAnimManager::ListAnims( void ) const {
 		namesize += jointnames[ i ].Size();
 	}
 
-	gameLocal.Printf( "\n%d memory used in %d anims\n", size, num );
-	gameLocal.Printf( "%d memory used in %d joint names\n", namesize, jointnames.Num() );
+	gameLocal.Printf( "\n%zd memory used in %d anims\n", size, num );
+	gameLocal.Printf( "%zd memory used in %d joint names\n", namesize, jointnames.Num() );
 }
 
 /*
@@ -1070,7 +1073,7 @@ void idAnimManager::FlushUnusedAnims( void ) {
 	int						i;
 	idMD5Anim				**animptr;
 	idList<idMD5Anim *>		removeAnims;
-	
+
 	for( i = 0; i < animations.Num(); i++ ) {
 		animptr = animations.GetIndex( i );
 		if ( animptr && *animptr ) {

@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,8 +26,16 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
+#include "idlib/CmdArgs.h"
+#include "framework/async/AsyncNetwork.h"
+#include "framework/Licensee.h"
+#include "framework/UsercmdGen.h"
+#include "renderer/tr_local.h"
+#include "sys/win32/rc/CreateResourceIDs.h"
+#include "sys/sys_local.h"
+
+#include "sys/win32/win_local.h"
 
 #include <errno.h>
 #include <float.h>
@@ -35,21 +43,16 @@ If you have questions concerning this license or the applicable additional terms
 #include <direct.h>
 #include <io.h>
 #include <conio.h>
-#include <mapi.h>
-#include <ShellAPI.h>
+#include <shellapi.h>
 
 #ifndef __MRC__
 #include <sys/types.h>
 #include <sys/stat.h>
 #endif
 
-#include "../sys_local.h"
-#include "win_local.h"
-#include "rc/CreateResourceIDs.h"
-#include "../../renderer/tr_local.h"
+#include <SDL_main.h>
 
 idCVar Win32Vars_t::sys_arch( "sys_arch", "", CVAR_SYSTEM | CVAR_INIT, "" );
-idCVar Win32Vars_t::sys_cpustring( "sys_cpustring", "detect", CVAR_SYSTEM | CVAR_INIT, "" );
 idCVar Win32Vars_t::in_mouse( "in_mouse", "1", CVAR_SYSTEM | CVAR_BOOL, "enable mouse input" );
 idCVar Win32Vars_t::win_allowAltTab( "win_allowAltTab", "0", CVAR_SYSTEM | CVAR_BOOL, "allow Alt-Tab when fullscreen" );
 idCVar Win32Vars_t::win_notaskkeys( "win_notaskkeys", "0", CVAR_SYSTEM | CVAR_INTEGER, "disable windows task keys" );
@@ -64,17 +67,7 @@ idCVar Win32Vars_t::win_allowMultipleInstances( "win_allowMultipleInstances", "0
 
 Win32Vars_t	win32;
 
-static char		sys_cmdline[MAX_STRING_CHARS];
-
-// not a hard limit, just what we keep track of for debugging
-xthreadInfo *g_threads[MAX_THREADS];
-
-int g_thread_count = 0;
-
 static sysMemoryStats_t exeLaunchMemoryStats;
-
-static	xthreadInfo	threadInfo;
-static	HANDLE		hTimer;
 
 /*
 ================
@@ -87,120 +80,12 @@ void Sys_GetExeLaunchMemoryStatus( sysMemoryStats_t &stats ) {
 
 /*
 ==================
-Sys_Createthread
-==================
-*/
-void Sys_CreateThread(  xthread_t function, void *parms, xthreadPriority priority, xthreadInfo &info, const char *name, xthreadInfo *threads[MAX_THREADS], int *thread_count ) {
-	HANDLE temp = CreateThread(	NULL,	// LPSECURITY_ATTRIBUTES lpsa,
-									0,		// DWORD cbStack,
-									(LPTHREAD_START_ROUTINE)function,	// LPTHREAD_START_ROUTINE lpStartAddr,
-									parms,	// LPVOID lpvThreadParm,
-									0,		//   DWORD fdwCreate,
-									&info.threadId);
-	info.threadHandle = (int) temp;
-	if (priority == THREAD_HIGHEST) {
-		SetThreadPriority( (HANDLE)info.threadHandle, THREAD_PRIORITY_HIGHEST );		//  we better sleep enough to do this
-	} else if (priority == THREAD_ABOVE_NORMAL ) {
-		SetThreadPriority( (HANDLE)info.threadHandle, THREAD_PRIORITY_ABOVE_NORMAL );
-	}
-	info.name = name;
-	if ( *thread_count < MAX_THREADS ) {
-		threads[(*thread_count)++] = &info;
-	} else {
-		common->DPrintf("WARNING: MAX_THREADS reached\n");
-	}
-}
-
-/*
-==================
-Sys_DestroyThread
-==================
-*/
-void Sys_DestroyThread( xthreadInfo& info ) {
-	WaitForSingleObject( (HANDLE)info.threadHandle, INFINITE);
-	CloseHandle( (HANDLE)info.threadHandle );
-	info.threadHandle = 0;
-}
-
-/*
-==================
 Sys_Sentry
 ==================
 */
 void Sys_Sentry() {
 	int j = 0;
 }
-
-/*
-==================
-Sys_GetThreadName
-==================
-*/
-const char* Sys_GetThreadName(int *index) {
-	int id = GetCurrentThreadId();
-	for( int i = 0; i < g_thread_count; i++ ) {
-		if ( id == g_threads[i]->threadId ) {
-			if ( index ) {
-				*index = i;
-			}
-			return g_threads[i]->name;
-		}
-	}
-	if ( index ) {
-		*index = -1;
-	}
-	return "main";
-}
-
-
-/*
-==================
-Sys_EnterCriticalSection
-==================
-*/
-void Sys_EnterCriticalSection( int index ) {
-	assert( index >= 0 && index < MAX_CRITICAL_SECTIONS );
-	if ( TryEnterCriticalSection( &win32.criticalSections[index] ) == 0 ) {
-		EnterCriticalSection( &win32.criticalSections[index] );
-//		Sys_DebugPrintf( "busy lock '%s' in thread '%s'\n", lock->name, Sys_GetThreadName() );
-	}
-}
-
-/*
-==================
-Sys_LeaveCriticalSection
-==================
-*/
-void Sys_LeaveCriticalSection( int index ) {
-	assert( index >= 0 && index < MAX_CRITICAL_SECTIONS );
-	LeaveCriticalSection( &win32.criticalSections[index] );
-}
-
-/*
-==================
-Sys_WaitForEvent
-==================
-*/
-void Sys_WaitForEvent( int index ) {
-	assert( index == 0 );
-	if ( !win32.backgroundDownloadSemaphore ) {
-		win32.backgroundDownloadSemaphore = CreateEvent( NULL, TRUE, FALSE, NULL );
-	}
-	WaitForSingleObject( win32.backgroundDownloadSemaphore, INFINITE );
-	ResetEvent( win32.backgroundDownloadSemaphore );
-}
-
-/*
-==================
-Sys_TriggerEvent
-==================
-*/
-void Sys_TriggerEvent( int index ) {
-	assert( index == 0 );
-	SetEvent( win32.backgroundDownloadSemaphore );
-}
-
-
 
 #pragma optimize( "", on )
 
@@ -239,14 +124,14 @@ Sys_AllocHook
 	called for every malloc/new/free/delete
 ==================
 */
-int Sys_AllocHook( int nAllocType, void *pvData, size_t nSize, int nBlockUse, long lRequest, const unsigned char * szFileName, int nLine ) 
+int Sys_AllocHook( int nAllocType, void *pvData, size_t nSize, int nBlockUse, long lRequest, const unsigned char * szFileName, int nLine )
 {
 	CrtMemBlockHeader	*pHead;
 	byte				*temp;
 
 	if ( nBlockUse == _CRT_BLOCK )
 	{
-      return( TRUE );
+	  return( TRUE );
 	}
 
 	// get a pointer to memory block header
@@ -294,8 +179,8 @@ Sys_DebugMemory_f
 ==================
 */
 void Sys_DebugMemory_f( void ) {
-  	common->Printf( "Total allocation %8dk in %d blocks\n", debug_total_alloc / 1024, debug_total_alloc_count );
-  	common->Printf( "Current allocation %8dk in %d blocks\n", debug_current_alloc / 1024, debug_current_alloc_count );
+	common->Printf( "Total allocation %8dk in %d blocks\n", debug_total_alloc / 1024, debug_total_alloc_count );
+	common->Printf( "Current allocation %8dk in %d blocks\n", debug_current_alloc / 1024, debug_current_alloc_count );
 }
 
 /*
@@ -335,7 +220,7 @@ Show the early console as an error dialog
 void Sys_Error( const char *error, ... ) {
 	va_list		argptr;
 	char		text[4096];
-    MSG        msg;
+	MSG        msg;
 
 	va_start( argptr, error );
 	vsprintf( text, error, argptr );
@@ -359,7 +244,7 @@ void Sys_Error( const char *error, ... ) {
 			common->Quit();
 		}
 		TranslateMessage( &msg );
-      	DispatchMessage( &msg );
+		DispatchMessage( &msg );
 	}
 
 	Sys_DestroyConsole();
@@ -433,15 +318,6 @@ void Sys_DebugVPrintf( const char *fmt, va_list arg ) {
 	msg[ sizeof(msg)-1 ] = '\0';
 
 	OutputDebugString( msg );
-}
-
-/*
-==============
-Sys_Sleep
-==============
-*/
-void Sys_Sleep( int msec ) {
-	Sleep( msec );
 }
 
 /*
@@ -596,7 +472,7 @@ char *Sys_GetClipboardData( void ) {
 				data = (char *)Mem_Alloc( GlobalSize( hClipboardData ) + 1 );
 				strcpy( data, cliptext );
 				GlobalUnlock( hClipboardData );
-				
+
 				strtok( data, "\n\r\b" );
 			}
 		}
@@ -655,7 +531,7 @@ DLL Loading
 Sys_DLL_Load
 =====================
 */
-int Sys_DLL_Load( const char *dllName ) {
+uintptr_t Sys_DLL_Load( const char *dllName ) {
 	HINSTANCE	libHandle;
 	libHandle = LoadLibrary( dllName );
 	if ( libHandle ) {
@@ -668,7 +544,7 @@ int Sys_DLL_Load( const char *dllName ) {
 			return 0;
 		}
 	}
-	return (int)libHandle;
+	return (uintptr_t)libHandle;
 }
 
 /*
@@ -676,8 +552,8 @@ int Sys_DLL_Load( const char *dllName ) {
 Sys_DLL_GetProcAddress
 =====================
 */
-void *Sys_DLL_GetProcAddress( int dllHandle, const char *procName ) {
-	return GetProcAddress( (HINSTANCE)dllHandle, procName ); 
+void *Sys_DLL_GetProcAddress( uintptr_t dllHandle, const char *procName ) {
+	return (void *)GetProcAddress( (HINSTANCE)dllHandle, procName );
 }
 
 /*
@@ -685,7 +561,7 @@ void *Sys_DLL_GetProcAddress( int dllHandle, const char *procName ) {
 Sys_DLL_Unload
 =====================
 */
-void Sys_DLL_Unload( int dllHandle ) {
+void Sys_DLL_Unload( uintptr_t dllHandle ) {
 	if ( !dllHandle ) {
 		return;
 	}
@@ -699,7 +575,7 @@ void Sys_DLL_Unload( int dllHandle ) {
 			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), // Default language
 			(LPTSTR) &lpMsgBuf,
 			0,
-			NULL 
+			NULL
 		);
 		Sys_Error( "Sys_DLL_Unload: FreeLibrary failed - %s (%d)", lpMsgBuf, lastError );
 	}
@@ -759,7 +635,7 @@ This allows windows to be moved during renderbump
 =============
 */
 void Sys_PumpEvents( void ) {
-    MSG msg;
+	MSG msg;
 
 	// pump the message loop
 	while( PeekMessage( &msg, NULL, 0, 0, PM_NOREMOVE ) ) {
@@ -769,20 +645,20 @@ void Sys_PumpEvents( void ) {
 
 		// save the msg time, because wndprocs don't have access to the timestamp
 		if ( win32.sysMsgTime && win32.sysMsgTime > (int)msg.time ) {
-			// don't ever let the event times run backwards	
+			// don't ever let the event times run backwards
 //			common->Printf( "Sys_PumpEvents: win32.sysMsgTime (%i) > msg.time (%i)\n", win32.sysMsgTime, msg.time );
 		} else {
 			win32.sysMsgTime = msg.time;
 		}
 
 #ifdef ID_ALLOW_TOOLS
-		if ( GUIEditorHandleMessage ( &msg ) ) {	
+		if ( GUIEditorHandleMessage ( &msg ) ) {
 			continue;
 		}
 #endif
- 
+
 		TranslateMessage (&msg);
-      	DispatchMessage (&msg);
+		DispatchMessage (&msg);
 	}
 }
 
@@ -844,7 +720,7 @@ sysEvent_t Sys_GetEvent( void ) {
 		return eventQue[ ( eventTail - 1 ) & MASK_QUED_EVENTS ];
 	}
 
-	// return the empty event 
+	// return the empty event
 	memset( &ev, 0, sizeof( ev ) );
 
 	return ev;
@@ -862,74 +738,6 @@ Restart the input subsystem
 void Sys_In_Restart_f( const idCmdArgs &args ) {
 	Sys_ShutdownInput();
 	Sys_InitInput();
-}
-
-
-/*
-==================
-Sys_AsyncThread
-==================
-*/
-static void Sys_AsyncThread( void *parm ) {
-	int		wakeNumber;
-	int		startTime;
-
-	startTime = Sys_Milliseconds();
-	wakeNumber = 0;
-
-	while ( 1 ) {
-#ifdef WIN32	
-		// this will trigger 60 times a second
-		int r = WaitForSingleObject( hTimer, 100 );
-		if ( r != WAIT_OBJECT_0 ) {
-			OutputDebugString( "idPacketServer::PacketServerInterrupt: bad wait return" );
-		}
-#endif
-
-#if 0
-		wakeNumber++;
-		int		msec = Sys_Milliseconds();
-		int		deltaTime = msec - startTime;
-		startTime = msec;
-
-		char	str[1024];
-		sprintf( str, "%i ", deltaTime );
-		OutputDebugString( str );
-#endif
-
-
-		common->Async();
-	}
-}
-
-/*
-==============
-Sys_StartAsyncThread
-
-Start the thread that will call idCommon::Async()
-==============
-*/
-void Sys_StartAsyncThread( void ) {
-	// create an auto-reset event that happens 60 times a second
-	hTimer = CreateWaitableTimer( NULL, false, NULL );
-	if ( !hTimer ) {
-		common->Error( "idPacketServer::Spawn: CreateWaitableTimer failed" );
-	}
-
-	LARGE_INTEGER	t;
-	t.HighPart = t.LowPart = 0;
-	SetWaitableTimer( hTimer, &t, USERCMD_MSEC, NULL, NULL, TRUE );
-
-	Sys_CreateThread( (xthread_t)Sys_AsyncThread, NULL, THREAD_ABOVE_NORMAL, threadInfo, "Async", g_threads,  &g_thread_count );
-
-#ifdef SET_THREAD_AFFINITY 
-	// give the async thread an affinity for the second cpu
-	SetThreadAffinityMask( (HANDLE)threadInfo.threadHandle, 2 );
-#endif
-
-	if ( !threadInfo.threadHandle ) {
-		common->Error( "Sys_StartAsyncThread: failed" );
-	}
 }
 
 /*
@@ -1029,93 +837,14 @@ void Sys_Init( void ) {
 			}
 		} else if( win32.osversion.dwMajorVersion == 4 && win32.osversion.dwMinorVersion == 90 ) {
 			// WinMe
-		  	win32.sys_arch.SetString( "WinMe (95)" );
+			win32.sys_arch.SetString( "WinMe (95)" );
 		} else {
-		  	win32.sys_arch.SetString( "Unknown 95 variant" );
+			win32.sys_arch.SetString( "Unknown 95 variant" );
 		}
 	} else {
 		win32.sys_arch.SetString( "unknown Windows variant" );
 	}
 
-	//
-	// CPU type
-	//
-	if ( !idStr::Icmp( win32.sys_cpustring.GetString(), "detect" ) ) {
-		idStr string;
-
-		common->Printf( "%1.0f MHz ", Sys_ClockTicksPerSecond() / 1000000.0f );
-
-		win32.cpuid = Sys_GetCPUId();
-
-		string.Clear();
-
-		if ( win32.cpuid & CPUID_AMD ) {
-			string += "AMD CPU";
-		} else if ( win32.cpuid & CPUID_INTEL ) {
-			string += "Intel CPU";
-		} else if ( win32.cpuid & CPUID_UNSUPPORTED ) {
-			string += "unsupported CPU";
-		} else {
-			string += "generic CPU";
-		}
-
-		string += " with ";
-		if ( win32.cpuid & CPUID_MMX ) {
-			string += "MMX & ";
-		}
-		if ( win32.cpuid & CPUID_3DNOW ) {
-			string += "3DNow! & ";
-		}
-		if ( win32.cpuid & CPUID_SSE ) {
-			string += "SSE & ";
-		}
-		if ( win32.cpuid & CPUID_SSE2 ) {
-            string += "SSE2 & ";
-		}
-		if ( win32.cpuid & CPUID_SSE3 ) {
-			string += "SSE3 & ";
-		}
-		if ( win32.cpuid & CPUID_HTT ) {
-			string += "HTT & ";
-		}
-		string.StripTrailing( " & " );
-		string.StripTrailing( " with " );
-		win32.sys_cpustring.SetString( string );
-	} else {
-		common->Printf( "forcing CPU type to " );
-		idLexer src( win32.sys_cpustring.GetString(), idStr::Length( win32.sys_cpustring.GetString() ), "sys_cpustring" );
-		idToken token;
-
-		int id = CPUID_NONE;
-		while( src.ReadToken( &token ) ) {
-			if ( token.Icmp( "generic" ) == 0 ) {
-				id |= CPUID_GENERIC;
-			} else if ( token.Icmp( "intel" ) == 0 ) {
-				id |= CPUID_INTEL;
-			} else if ( token.Icmp( "amd" ) == 0 ) {
-				id |= CPUID_AMD;
-			} else if ( token.Icmp( "mmx" ) == 0 ) {
-				id |= CPUID_MMX;
-			} else if ( token.Icmp( "3dnow" ) == 0 ) {
-				id |= CPUID_3DNOW;
-			} else if ( token.Icmp( "sse" ) == 0 ) {
-				id |= CPUID_SSE;
-			} else if ( token.Icmp( "sse2" ) == 0 ) {
-				id |= CPUID_SSE2;
-			} else if ( token.Icmp( "sse3" ) == 0 ) {
-				id |= CPUID_SSE3;
-			} else if ( token.Icmp( "htt" ) == 0 ) {
-				id |= CPUID_HTT;
-			}
-		}
-		if ( id == CPUID_NONE ) {
-			common->Printf( "WARNING: unknown sys_cpustring '%s'\n", win32.sys_cpustring.GetString() );
-			id = CPUID_GENERIC;
-		}
-		win32.cpuid = (cpuid_t) id;
-	}
-
-	common->Printf( "%s\n", win32.sys_cpustring.GetString() );
 	common->Printf( "%d MB System Memory\n", Sys_GetSystemRam() );
 	common->Printf( "%d MB Video Memory\n", Sys_GetVideoRam() );
 }
@@ -1127,24 +856,6 @@ Sys_Shutdown
 */
 void Sys_Shutdown( void ) {
 	CoUninitialize();
-}
-
-/*
-================
-Sys_GetProcessorId
-================
-*/
-cpuid_t Sys_GetProcessorId( void ) {
-    return win32.cpuid;
-}
-
-/*
-================
-Sys_GetProcessorString
-================
-*/
-const char *Sys_GetProcessorString( void ) {
-	return win32.sys_cpustring.GetString();
 }
 
 //=======================================================================
@@ -1165,34 +876,6 @@ void Win_Frame( void ) {
 		}
 		win32.win_viewlog.ClearModified();
 	}
-}
-
-extern "C" { void _chkstk( int size ); };
-void clrstk( void );
-
-/*
-====================
-TestChkStk
-====================
-*/
-void TestChkStk( void ) {
-	int		buffer[0x1000];
-
-	buffer[0] = 1;
-}
-
-/*
-====================
-HackChkStk
-====================
-*/
-void HackChkStk( void ) {
-	DWORD	old;
-	VirtualProtect( _chkstk, 6, PAGE_EXECUTE_READWRITE, &old );
-	*(byte *)_chkstk = 0xe9;
-	*(int *)((int)_chkstk+1) = (int)clrstk - (int)_chkstk - 5;
-
-	TestChkStk();
 }
 
 /*
@@ -1226,128 +909,7 @@ const char *GetExceptionCodeInfo( UINT code ) {
 	}
 }
 
-/*
-====================
-EmailCrashReport
-
-  emailer originally from Raven/Quake 4
-====================
-*/
-void EmailCrashReport( LPSTR messageText ) {
-	LPMAPISENDMAIL	MAPISendMail;
-	MapiMessage		message;
-	static int lastEmailTime = 0;
-
-	if ( Sys_Milliseconds() < lastEmailTime + 10000 ) {
-		return;
-	}
-
-	lastEmailTime = Sys_Milliseconds();
-
-	HINSTANCE mapi = LoadLibrary( "MAPI32.DLL" ); 
-	if( mapi ) {
-		MAPISendMail = ( LPMAPISENDMAIL )GetProcAddress( mapi, "MAPISendMail" );
-		if( MAPISendMail ) {
-			MapiRecipDesc toProgrammers =
-			{
-				0,										// ulReserved
-					MAPI_TO,							// ulRecipClass
-					"DOOM 3 Crash",						// lpszName
-					"SMTP:programmers@idsoftware.com",	// lpszAddress
-					0,									// ulEIDSize
-					0									// lpEntry
-			};
-
-			memset( &message, 0, sizeof( message ) );
-			message.lpszSubject = "DOOM 3 Fatal Error";
-			message.lpszNoteText = messageText;
-			message.nRecipCount = 1;
-			message.lpRecips = &toProgrammers;
-
-			MAPISendMail(
-				0,									// LHANDLE lhSession
-				0,									// ULONG ulUIParam
-				&message,							// lpMapiMessage lpMessage
-				MAPI_DIALOG,						// FLAGS flFlags
-				0									// ULONG ulReserved
-				);
-		}
-		FreeLibrary( mapi );
-	}
-}
-
 int Sys_FPU_PrintStateFlags( char *ptr, int ctrl, int stat, int tags, int inof, int inse, int opof, int opse );
-
-/*
-====================
-_except_handler
-====================
-*/
-EXCEPTION_DISPOSITION __cdecl _except_handler( struct _EXCEPTION_RECORD *ExceptionRecord, void * EstablisherFrame,
-												struct _CONTEXT *ContextRecord, void * DispatcherContext ) {
-
-	static char msg[ 8192 ];
-	char FPUFlags[2048];
-
-	Sys_FPU_PrintStateFlags( FPUFlags, ContextRecord->FloatSave.ControlWord,
-										ContextRecord->FloatSave.StatusWord,
-										ContextRecord->FloatSave.TagWord,
-										ContextRecord->FloatSave.ErrorOffset,
-										ContextRecord->FloatSave.ErrorSelector,
-										ContextRecord->FloatSave.DataOffset,
-										ContextRecord->FloatSave.DataSelector );
-
-
-	sprintf( msg, 
-		"Please describe what you were doing when DOOM 3 crashed!\n"
-		"If this text did not pop into your email client please copy and email it to programmers@idsoftware.com\n"
-			"\n"
-			"-= FATAL EXCEPTION =-\n"
-			"\n"
-			"%s\n"
-			"\n"
-			"0x%x at address 0x%08x\n"
-			"\n"
-			"%s\n"
-			"\n"
-			"EAX = 0x%08x EBX = 0x%08x\n"
-			"ECX = 0x%08x EDX = 0x%08x\n"
-			"ESI = 0x%08x EDI = 0x%08x\n"
-			"EIP = 0x%08x ESP = 0x%08x\n"
-			"EBP = 0x%08x EFL = 0x%08x\n"
-			"\n"
-			"CS = 0x%04x\n"
-			"SS = 0x%04x\n"
-			"DS = 0x%04x\n"
-			"ES = 0x%04x\n"
-			"FS = 0x%04x\n"
-			"GS = 0x%04x\n"
-			"\n"
-			"%s\n",
-			com_version.GetString(),
-			ExceptionRecord->ExceptionCode,
-			ExceptionRecord->ExceptionAddress,
-			GetExceptionCodeInfo( ExceptionRecord->ExceptionCode ),
-			ContextRecord->Eax, ContextRecord->Ebx,
-			ContextRecord->Ecx, ContextRecord->Edx,
-			ContextRecord->Esi, ContextRecord->Edi,
-			ContextRecord->Eip, ContextRecord->Esp,
-			ContextRecord->Ebp, ContextRecord->EFlags,
-			ContextRecord->SegCs,
-			ContextRecord->SegSs,
-			ContextRecord->SegDs,
-			ContextRecord->SegEs,
-			ContextRecord->SegFs,
-			ContextRecord->SegGs,
-			FPUFlags
-		);
-
-	EmailCrashReport( msg );
-	common->FatalError( msg );
-
-    // Tell the OS to restart the faulting instruction
-    return ExceptionContinueExecution;
-}
 
 #define TEST_FPU_EXCEPTIONS	/*	FPU_EXCEPTION_INVALID_OPERATION |		*/	\
 							/*	FPU_EXCEPTION_DENORMALIZED_OPERAND |	*/	\
@@ -1362,39 +924,20 @@ EXCEPTION_DISPOSITION __cdecl _except_handler( struct _EXCEPTION_RECORD *Excepti
 WinMain
 ==================
 */
-int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow ) {
-
+int main(int argc, char *argv[]) {
 	const HCURSOR hcurSave = ::SetCursor( LoadCursor( 0, IDC_WAIT ) );
 
 	Sys_SetPhysicalWorkMemory( 192 << 20, 1024 << 20 );
 
 	Sys_GetCurrentMemoryStatus( exeLaunchMemoryStats );
 
-#if 0
-    DWORD handler = (DWORD)_except_handler;
-    __asm
-    {                           // Build EXCEPTION_REGISTRATION record:
-        push    handler         // Address of handler function
-        push    FS:[0]          // Address of previous handler
-        mov     FS:[0],ESP      // Install new EXECEPTION_REGISTRATION
-    }
-#endif
-
-	win32.hInstance = hInstance;
-	idStr::Copynz( sys_cmdline, lpCmdLine, sizeof( sys_cmdline ) );
+	win32.hInstance = GetModuleHandle(NULL);
 
 	// done before Com/Sys_Init since we need this for error output
 	Sys_CreateConsole();
 
 	// no abort/retry/fail errors
 	SetErrorMode( SEM_FAILCRITICALERRORS );
-
-	for ( int i = 0; i < MAX_CRITICAL_SECTIONS; i++ ) {
-		InitializeCriticalSection( &win32.criticalSections[i] );
-	}
-
-	// get the initial time base
-	Sys_Milliseconds();
 
 #ifdef DEBUG
 	// disable the painfully slow MS heap check every 1024 allocs
@@ -1404,7 +947,11 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 //	Sys_FPU_EnableExceptions( TEST_FPU_EXCEPTIONS );
 	Sys_FPU_SetPrecision( FPU_PRECISION_DOUBLE_EXTENDED );
 
-	common->Init( 0, NULL, lpCmdLine );
+	if ( argc > 1 ) {
+		common->Init( argc-1, &argv[1] );
+	} else {
+		common->Init( 0, NULL );
+	}
 
 #if TEST_FPU_EXCEPTIONS != 0
 	common->Printf( Sys_FPU_GetState() );
@@ -1416,8 +963,6 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	}
 #endif
 
-	Sys_StartAsyncThread();
-
 	// hide or show the early console as necessary
 	if ( win32.win_viewlog.GetInteger() || com_skipRenderer.GetBool() || idAsyncNetwork::serverDedicated.GetInteger() ) {
 		Sys_ShowConsole( 1, true );
@@ -1425,7 +970,7 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 		Sys_ShowConsole( 0, false );
 	}
 
-#ifdef SET_THREAD_AFFINITY 
+#ifdef SET_THREAD_AFFINITY
 	// give the main thread an affinity for the first cpu
 	SetThreadAffinityMask( GetCurrentThread(), 1 );
 #endif
@@ -1433,14 +978,14 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	::SetCursor( hcurSave );
 
 	// Launch the script debugger
-	if ( strstr( lpCmdLine, "+debugger" ) ) {
+	if ( strstr( GetCommandLine(), "+debugger" ) ) {
 		// DebuggerClientInit( lpCmdLine );
 		return 0;
 	}
 
 	::SetFocus( win32.hWnd );
 
-    // main game loop
+	// main game loop
 	while( 1 ) {
 
 		Win_Frame();
@@ -1506,42 +1051,6 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 }
 
 /*
-====================
-clrstk
-
-I tried to get the run time to call this at every function entry, but
-====================
-*/
-static int	parmBytes;
-__declspec( naked ) void clrstk( void ) {
-	// eax = bytes to add to stack
-	__asm {
-		mov		[parmBytes],eax
-        neg     eax                     ; compute new stack pointer in eax
-        add     eax,esp
-        add     eax,4
-        xchg    eax,esp
-        mov     eax,dword ptr [eax]		; copy the return address
-        push    eax
-        
-        ; clear to zero
-        push	edi
-        push	ecx
-        mov		edi,esp
-        add		edi,12
-        mov		ecx,[parmBytes]
-		shr		ecx,2
-        xor		eax,eax
-		cld
-        rep	stosd
-        pop		ecx
-        pop		edi
-        
-        ret
-	}
-}
-
-/*
 ==================
 idSysLocal::OpenURL
 ==================
@@ -1589,7 +1098,7 @@ void idSysLocal::StartProcess( const char *exePath, bool doexit ) {
 	strncpy( szPathOrig, exePath, _MAX_PATH );
 
 	if( !CreateProcess( NULL, szPathOrig, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi ) ) {
-        common->Error( "Could not start process: '%s' ", szPathOrig );
+		common->Error( "Could not start process: '%s' ", szPathOrig );
 	    return;
 	}
 

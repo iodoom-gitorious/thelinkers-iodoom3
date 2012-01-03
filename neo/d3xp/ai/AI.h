@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -28,6 +28,13 @@ If you have questions concerning this license or the applicable additional terms
 
 #ifndef __AI_H__
 #define __AI_H__
+
+#include "physics/Physics_Monster.h"
+#include "Entity.h"
+#include "Actor.h"
+#include "Projectile.h"
+
+class idFuncEmitter;
 
 /*
 ===============================================================================
@@ -70,7 +77,7 @@ typedef enum {
 
 	MOVE_TO_ENEMY = NUM_NONMOVING_COMMANDS,
 	MOVE_TO_ENEMYHEIGHT,
-	MOVE_TO_ENTITY, 
+	MOVE_TO_ENTITY,
 	MOVE_OUT_OF_RANGE,
 	MOVE_TO_ATTACK_POSITION,
 	MOVE_TO_COVER,
@@ -112,9 +119,9 @@ typedef struct obstaclePath_s {
 	idVec3				seekPos;					// seek position avoiding obstacles
 	idEntity *			firstObstacle;				// if != NULL the first obstacle along the path
 	idVec3				startPosOutsideObstacles;	// start position outside obstacles
-	idEntity *			startPosObstacle;			// if != NULL the obstacle containing the start position 
+	idEntity *			startPosObstacle;			// if != NULL the obstacle containing the start position
 	idVec3				seekPosOutsideObstacles;	// seek position outside obstacles
-	idEntity *			seekPosObstacle;			// if != NULL the obstacle containing the seek position 
+	idEntity *			seekPosObstacle;			// if != NULL the obstacle containing the seek position
 } obstaclePath_t;
 
 // path prediction
@@ -232,6 +239,8 @@ private:
 	float				maxDistSqr;
 };
 
+class idAI;
+
 class idAASFindAttackPosition : public idAASCallback {
 public:
 						idAASFindAttackPosition( const idAI *self, const idMat3 &gravityAxis, idEntity *target, const idVec3 &targetPos, const idVec3 &fireOffset );
@@ -333,7 +342,7 @@ protected:
 	bool					allowHiddenMovement;		// allows character to still move around while hidden
 	bool					disableGravity;				// disables gravity and allows vertical movement by the animation
 	bool					af_push_moveables;			// allow the articulated figure to push moveable objects
-	
+
 	// weapon/attack vars
 	bool					lastHitCheckResult;
 	int						lastHitCheckTime;
@@ -385,7 +394,7 @@ protected:
 	// special fx
 	float					shrivel_rate;
 	int						shrivel_start;
-	
+
 	bool					restartParticles;			// should smoke emissions restart
 	bool					useBoneAxis;				// use the bone vs the model axis
 	idList<particleEmitter_t> particles;				// particle data
@@ -689,8 +698,8 @@ protected:
 	void					Event_AllowHiddenMovement( int enable );
 	void					Event_TriggerParticles( const char *jointName );
 	void					Event_FindActorsInBounds( const idVec3 &mins, const idVec3 &maxs );
-	void 					Event_CanReachPosition( const idVec3 &pos );
-	void 					Event_CanReachEntity( idEntity *ent );
+	void					Event_CanReachPosition( const idVec3 &pos );
+	void					Event_CanReachEntity( idEntity *ent );
 	void					Event_CanReachEnemy( void );
 	void					Event_GetReachableEntityPosition( idEntity *ent );
 #ifdef _D3XP

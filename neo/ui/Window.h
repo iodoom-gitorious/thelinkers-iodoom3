@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -29,12 +29,13 @@ If you have questions concerning this license or the applicable additional terms
 #ifndef __WINDOW_H__
 #define __WINDOW_H__
 
-#include "Rectangle.h"
-#include "DeviceContext.h"
-#include "RegExp.h"
-#include "Winvar.h"
-#include "GuiScript.h"
-#include "SimpleWindow.h"
+#include "idlib/math/Interpolate.h"
+#include "ui/Rectangle.h"
+#include "ui/DeviceContext.h"
+#include "ui/RegExp.h"
+#include "ui/Winvar.h"
+#include "ui/GuiScript.h"
+#include "ui/SimpleWindow.h"
 
 const int WIN_CHILD			= 0x00000001;
 const int WIN_CAPTION		= 0x00000002;
@@ -71,6 +72,9 @@ const int SCROLLBAR_SIZE = 16;
 const int MAX_WINDOW_NAME = 32;
 const int MAX_LIST_ITEMS = 1024;
 
+const int MAX_EXPRESSION_OPS = 4096;
+const int MAX_EXPRESSION_REGISTERS = 4096;
+
 const char DEFAULT_BACKCOLOR[] = "1 1 1 1";
 const char DEFAULT_FORECOLOR[] = "0 0 0 1";
 const char DEFAULT_BORDERCOLOR[] = "0 0 0 1";
@@ -105,8 +109,8 @@ typedef enum {
 } wexpRegister_t;
 
 typedef struct {
-	wexpOpType_t opType;	
-	int	a, b, c, d;
+	wexpOpType_t opType;
+	intptr_t a, b, c, d;
 } wexpOp_t;
 
 struct idRegEntry {
@@ -146,11 +150,11 @@ public:
 	{
 		delete mEvent;
 	}
-	size_t Size() 
+	size_t Size()
 	{
 		return sizeof(*this) + mEvent->Size();
 	}
-	
+
 	idStr				mName;
 	idGuiScriptList*	mEvent;
 };
@@ -230,7 +234,7 @@ public:
 
 	virtual idWinVar *GetWinVarByName	(const char *_name, bool winLookup = false, drawWin_t** owner = NULL);
 
-	int  GetWinVarOffset( idWinVar *wv, drawWin_t *dw );
+	intptr_t GetWinVarOffset( idWinVar *wv, drawWin_t *dw );
 	float GetMaxCharHeight();
 	float GetMaxCharWidth();
 	void SetFont();
@@ -300,7 +304,7 @@ public:
 	bool RunScript(int n);
 	bool RunScriptList(idGuiScriptList *src);
 	void SetRegs(const char *key, const char *val);
-	int ParseExpression( idParser *src, idWinVar *var = NULL, int component = 0 );
+	intptr_t ParseExpression( idParser *src, idWinVar *var = NULL, intptr_t component = 0 );
 	int ExpressionConstant(float f);
 	idRegisterList *RegList() { return &regList; }
 	void AddCommand(const char *cmd);
@@ -350,10 +354,10 @@ protected:
 
 	int ExpressionTemporary();
 	wexpOp_t *ExpressionOp();
-	int EmitOp( int a, int b, wexpOpType_t opType, wexpOp_t **opp = NULL );
-	int ParseEmitOp( idParser *src, int a, wexpOpType_t opType, int priority, wexpOp_t **opp = NULL );
-	int ParseTerm( idParser *src, idWinVar *var = NULL, int component = 0 );
-	int ParseExpressionPriority( idParser *src, int priority, idWinVar *var = NULL, int component = 0 );
+	intptr_t EmitOp( intptr_t a, intptr_t b, wexpOpType_t opType, wexpOp_t **opp = NULL );
+	intptr_t ParseEmitOp( idParser *src, intptr_t a, wexpOpType_t opType, int priority, wexpOp_t **opp = NULL );
+	intptr_t ParseTerm( idParser *src, idWinVar *var = NULL, intptr_t component = 0 );
+	intptr_t ParseExpressionPriority( idParser *src, int priority, idWinVar *var = NULL, intptr_t component = 0 );
 	void EvaluateRegisters(float *registers);
 	void SaveExpressionParseState();
 	void RestoreExpressionParseState();
@@ -368,14 +372,14 @@ protected:
 	float actualX;					// physical coords
 	float actualY;					// ''
 	int	  childID;					// this childs id
-	unsigned int flags;             // visible, focus, mouseover, cursor, border, etc.. 
+	unsigned int flags;             // visible, focus, mouseover, cursor, border, etc..
 	int lastTimeRun;				//
 	idRectangle drawRect;			// overall rect
 	idRectangle clientRect;			// client area
 	idVec2	origin;
 
 	int timeLine;					// time stamp used for various fx
-	float xOffset;			
+	float xOffset;
 	float yOffset;
 	float forceAspectWidth;
 	float forceAspectHeight;
@@ -393,8 +397,8 @@ protected:
 	unsigned char cursor;					//
 	signed char	textAlign;
 
-	idWinBool	noTime;					// 
-	idWinBool	visible;				// 
+	idWinBool	noTime;					//
+	idWinBool	visible;				//
 	idWinBool	noEvents;
 	idWinRectangle rect;				// overall rect
 	idWinVec4	backColor;
@@ -405,17 +409,17 @@ protected:
 	idWinFloat	textScale;
 	idWinFloat	rotate;
 	idWinStr	text;
-	idWinBackground	backGroundName;			// 
+	idWinBackground	backGroundName;			//
 
 	idList<idWinVar*> definedVars;
 	idList<idWinVar*> updateVars;
 
 	idRectangle textRect;			// text extented rect
-	const idMaterial *background;         // background asset  
+	const idMaterial *background;         // background asset
 
 	idWindow *parent;				// parent window
-	idList<idWindow*> children;		// child windows	
-	idList<drawWin_t> drawWindows;		
+	idList<idWindow*> children;		// child windows
+	idList<drawWin_t> drawWindows;
 
 	idWindow *focusedChild;			// if a child window has the focus
 	idWindow *captureChild;			// if a child window has mouse capture
@@ -437,9 +441,9 @@ protected:
 
 	static bool registerIsTemporary[MAX_EXPRESSION_REGISTERS]; // statics to assist during parsing
 
-	idList<wexpOp_t> ops;			   	// evaluate to make expressionRegisters
+	idList<wexpOp_t> ops;				// evaluate to make expressionRegisters
 	idList<float> expressionRegisters;
-	idList<wexpOp_t> *saveOps;			   	// evaluate to make expressionRegisters
+	idList<wexpOp_t> *saveOps;				// evaluate to make expressionRegisters
 	idList<rvNamedEvent*>		namedEvents;		//  added named events
 	idList<float> *saveRegs;
 

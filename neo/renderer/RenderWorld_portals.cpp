@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,10 +26,12 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
+#include "framework/DemoFile.h"
+#include "framework/Session.h"
+#include "renderer/RenderWorld_local.h"
 
-#include "tr_local.h"
+#include "renderer/tr_local.h"
 
 /*
 
@@ -149,7 +151,7 @@ bool idRenderWorldLocal::PortalIsFoggedOut( const portal_t *p ) {
 FloodViewThroughArea_r
 ===================
 */
-void idRenderWorldLocal::FloodViewThroughArea_r( const idVec3 origin, int areaNum, 
+void idRenderWorldLocal::FloodViewThroughArea_r( const idVec3 origin, int areaNum,
 								 const struct portalStack_s *ps ) {
 	portal_t*		p;
 	float			d;
@@ -231,7 +233,7 @@ void idRenderWorldLocal::FloodViewThroughArea_r( const idVec3 origin, int areaNu
 		// find the screen pixel bounding box of the remaining portal
 		// so we can scissor things outside it
 		newStack.rect = ScreenRectFromWinding( &w, &tr.identitySpace );
-		
+
 		// slop might have spread it a pixel outside, so trim it back
 		newStack.rect.Intersect( ps->rect );
 
@@ -325,12 +327,12 @@ void idRenderWorldLocal::FlowViewThroughPortals( const idVec3 origin, int numPla
 FloodLightThroughArea_r
 ===================
 */
-void idRenderWorldLocal::FloodLightThroughArea_r( idRenderLightLocal *light, int areaNum, 
+void idRenderWorldLocal::FloodLightThroughArea_r( idRenderLightLocal *light, int areaNum,
 								 const struct portalStack_s *ps ) {
 	portal_t*		p;
 	float			d;
 	portalArea_t *	area;
-	const portalStack_t	*check, *firstPortalStack;
+	const portalStack_t	*check, *firstPortalStack = NULL;
 	portalStack_t	newStack;
 	int				i, j;
 	idVec3			v1, v2;
@@ -340,7 +342,7 @@ void idRenderWorldLocal::FloodLightThroughArea_r( idRenderLightLocal *light, int
 	area = &portalAreas[ areaNum ];
 
 	// add an areaRef
-	AddLightRefToArea( light, area );	
+	AddLightRefToArea( light, area );
 
 	// go through all the portals
 	for ( p = area->portals; p; p = p->next ) {
@@ -444,7 +446,6 @@ prelight, because shadows are cast from back side which may not be in visible ar
 void idRenderWorldLocal::FlowLightThroughPortals( idRenderLightLocal *light ) {
 	portalStack_t	ps;
 	int				i;
-	const idVec3 origin = light->globalLightOrigin;
 
 	// if the light origin areaNum is not in a valid area,
 	// the light won't have any area refs
@@ -585,7 +586,7 @@ bool idRenderWorldLocal::CullEntityByPortals( const idRenderEntityLocal *entity,
 AddAreaEntityRefs
 
 Any models that are visible through the current portalStack will
-have their scissor 
+have their scissor
 ===================
 */
 void idRenderWorldLocal::AddAreaEntityRefs( int areaNum, const portalStack_t *ps ) {
@@ -614,7 +615,7 @@ void idRenderWorldLocal::AddAreaEntityRefs( int areaNum, const portalStack_t *ps
 					&& entity->parms.suppressSurfaceInViewID == tr.viewDef->renderView.viewID ) {
 				continue;
 			}
-			if ( entity->parms.allowSurfaceInViewID 
+			if ( entity->parms.allowSurfaceInViewID
 					&& entity->parms.allowSurfaceInViewID != tr.viewDef->renderView.viewID ) {
 				continue;
 			}

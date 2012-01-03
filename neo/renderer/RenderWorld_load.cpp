@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,11 +26,12 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
+#include "framework/Session.h"
+#include "renderer/ModelManager.h"
+#include "renderer/RenderWorld_local.h"
 
-#include "tr_local.h"
-
+#include "renderer/tr_local.h"
 
 /*
 ================
@@ -83,7 +84,7 @@ void idRenderWorldLocal::FreeWorld() {
 		areaNodes = NULL;
 	}
 
-	// free all the inline idRenderModels 
+	// free all the inline idRenderModels
 	for ( i = 0 ; i < localModels.Num() ; i++ ) {
 		renderModelManager->RemoveModel( localModels[i] );
 		delete localModels[i];
@@ -291,7 +292,7 @@ void idRenderWorldLocal::ParseInterAreaPortals( idLexer *src ) {
 		return;
 	}
 
-	doublePortals = (doublePortal_t *)R_ClearedStaticAlloc( numInterAreaPortals * 
+	doublePortals = (doublePortal_t *)R_ClearedStaticAlloc( numInterAreaPortals *
 		sizeof( doublePortals [0] ) );
 
 	for ( i = 0 ; i < numInterAreaPortals ; i++ ) {

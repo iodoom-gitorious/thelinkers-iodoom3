@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -29,6 +29,8 @@ If you have questions concerning this license or the applicable additional terms
 #ifndef __STR_H__
 #define __STR_H__
 
+#include "idlib/CmdArgs.h"
+
 /*
 ===============================================================================
 
@@ -38,6 +40,7 @@ If you have questions concerning this license or the applicable additional terms
 */
 
 // these library functions should not be used for cross platform compatibility
+#ifndef IDSTR_NO_REDIRECT
 #define strcmp			idStr::Cmp		// use_idStr_Cmp
 #define strncmp			use_idStr_Cmpn
 
@@ -63,6 +66,9 @@ If you have questions concerning this license or the applicable additional terms
 
 #define stricmp			idStr::Icmp		// use_idStr_Icmp
 #define _stricmp		use_idStr_Icmp
+#if defined( strcasecmp )
+#undef strcasecmp
+#endif
 #define strcasecmp		use_idStr_Icmp
 #define strnicmp		use_idStr_Icmpn
 #define _strnicmp		use_idStr_Icmpn
@@ -71,6 +77,7 @@ If you have questions concerning this license or the applicable additional terms
 #define _snprintf		use_idStr_snPrintf
 #define vsnprintf		use_idStr_vsnPrintf
 #define _vsnprintf		use_idStr_vsnPrintf
+#endif
 
 class idVec4;
 

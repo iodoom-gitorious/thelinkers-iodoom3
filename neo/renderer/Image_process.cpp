@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -25,10 +25,11 @@ If you have questions concerning this license or the applicable additional terms
 
 ===========================================================================
 */
-#include "../idlib/precompiled.h"
-#pragma hdrstop
 
-#include "tr_local.h"
+#include "sys/platform.h"
+#include "renderer/tr_local.h"
+
+#include "renderer/Image.h"
 
 /*
 ================
@@ -39,12 +40,12 @@ Used to resample images in a more general than quartering fashion.
 This will only have filter coverage if the resampled size
 is greater than half the original size.
 
-If a larger shrinking is needed, use the mipmap function 
+If a larger shrinking is needed, use the mipmap function
 after resampling to the next lower power of two.
 ================
 */
 #define	MAX_DIMENSION	4096
-byte *R_ResampleTexture( const byte *in, int inwidth, int inheight,  
+byte *R_ResampleTexture( const byte *in, int inwidth, int inheight,
 							int outwidth, int outheight ) {
 	int		i, j;
 	const byte	*inrow, *inrow2;
@@ -103,7 +104,7 @@ Used to resample images in a more general than quartering fashion.
 Normal maps and such should not be bilerped.
 ================
 */
-byte *R_Dropsample( const byte *in, int inwidth, int inheight,  
+byte *R_Dropsample( const byte *in, int inwidth, int inheight,
 							int outwidth, int outheight ) {
 	int		i, j, k;
 	const byte	*inrow;
@@ -271,7 +272,7 @@ void	R_SetAlphaNormalDivergence( byte *in, int width, int height ) {
 					if ( yy == 0 && xx == 0 ) {
 						continue;
 					}
-					byte	*corner_p = in + ( ((y+yy)&(height-1)) * width + ((x+xx)&width-1) ) * 4;
+					byte	*corner_p = in + ( ((y+yy)&(height-1)) * width + ((x+xx)&(width-1)) ) * 4;
 					idVec3	corner;
 					corner[0] = ( corner_p[0] - 128 ) / 127;
 					corner[1] = ( corner_p[1] - 128 ) / 127;
@@ -308,7 +309,6 @@ byte *R_MipMapWithAlphaSpecularity( const byte *in, int width, int height ) {
 	int		i, j, c, x, y, sx, sy;
 	const byte	*in_p;
 	byte	*out, *out_p;
-	int		row;
 	int		newWidth, newHeight;
 	float	*fbuf, *fbuf_p;
 
@@ -327,8 +327,6 @@ byte *R_MipMapWithAlphaSpecularity( const byte *in, int width, int height ) {
 		fbuf_p[2] = ( in_p[2] / 255.0 ) * 2.0 - 1.0;
 		fbuf_p[3] = ( in_p[3] / 255.0 );				// filtered divegence / specularity
 	}
-
-	row = width * 4;
 
 	newWidth = width >> 1;
 	newHeight = height >> 1;
@@ -618,4 +616,3 @@ void R_RotatePic( byte *data, int width ) {
 
 	R_StaticFree( temp );
 }
-

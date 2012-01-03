@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -25,17 +25,17 @@ If you have questions concerning this license or the applicable additional terms
 
 ===========================================================================
 */
-#include "../idlib/precompiled.h"
-#pragma hdrstop
 
-#include "tr_local.h"
+#include "sys/platform.h"
 
+#include "renderer/tr_local.h"
 
 /*
 ===============
 R_MeshCost
 ===============
 */
+#if 0
 #define	CACHE_SIZE	24
 #define	STALL_SIZE	8
 int	R_MeshCost( int numIndexes, glIndex_t *indexes ) {
@@ -71,6 +71,7 @@ int	R_MeshCost( int numIndexes, glIndex_t *indexes ) {
 
 	return c_loads;
 }
+#endif
 
 
 typedef struct vertRef_s {
@@ -98,7 +99,7 @@ void R_OrderIndexes( int numIndexes, glIndex_t *indexes ) {
 	int			numVerts;
 	int			v1, v2;
 	int			c_starts;
-	int			c_cost;
+	//int			c_cost;
 
 	if ( !r_orderIndexes.GetBool() ) {
 		return;
@@ -192,7 +193,7 @@ void R_OrderIndexes( int numIndexes, glIndex_t *indexes ) {
 		} while ( 1 );
 	}
 
-	c_cost = R_MeshCost( numIndexes, indexes );
+	//c_cost = R_MeshCost( numIndexes, indexes );
 
 }
 
@@ -209,4 +210,3 @@ void R_OrderIndexes( int numIndexes, glIndex_t *indexes ) {
 
 
 */
-

@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -25,11 +25,18 @@ If you have questions concerning this license or the applicable additional terms
 
 ===========================================================================
 */
- 
-#include "../idlib/precompiled.h"
-#pragma hdrstop
 
-#include "Game_local.h"
+#include "sys/platform.h"
+#include "renderer/ModelManager.h"
+
+#include "gamesys/SysCvar.h"
+#include "script/Script_Thread.h"
+#include "ai/AI.h"
+#include "Player.h"
+#include "Mover.h"
+#include "SmokeParticles.h"
+
+#include "Projectile.h"
 
 /*
 ===============================================================================
@@ -274,7 +281,6 @@ idProjectile::Launch
 */
 void idProjectile::Launch( const idVec3 &start, const idVec3 &dir, const idVec3 &pushVelocity, const float timeSinceFire, const float launchPower, const float dmgPower ) {
 	float			fuse;
-	float			startthrust;
 	float			endthrust;
 	idVec3			velocity;
 	idAngles		angular_velocity;
@@ -288,7 +294,6 @@ void idProjectile::Launch( const idVec3 &start, const idVec3 &dir, const idVec3 
 	idVec3			gravVec;
 	idVec3			tmp;
 	idMat3			axis;
-	int				thrust_start;
 	int				contents;
 	int				clipMask;
 
@@ -300,11 +305,10 @@ void idProjectile::Launch( const idVec3 &start, const idVec3 &dir, const idVec3 
 	}
 
 	thrust				= spawnArgs.GetFloat( "thrust" );
-	startthrust			= spawnArgs.GetFloat( "thrust_start" );
 	endthrust			= spawnArgs.GetFloat( "thrust_end" );
 
 	spawnArgs.GetVector( "velocity", "0 0 0", velocity );
-	
+
 	speed = velocity.Length() * launchPower;
 
 	damagePower = dmgPower;
@@ -328,7 +332,6 @@ void idProjectile::Launch( const idVec3 &start, const idVec3 &dir, const idVec3 
 	}
 
 	thrust *= mass;
-	thrust_start = SEC2MS( startthrust ) + gameLocal.time;
 	thrust_end = SEC2MS( endthrust ) + gameLocal.time;
 
 	lightStartTime = 0;
@@ -465,11 +468,11 @@ void idProjectile::Think( void ) {
 				if ( gameLocal.time < lightEndTime ) {
 					float frac = ( float )( gameLocal.time - lightStartTime ) / ( float )( lightEndTime - lightStartTime );
 					color.Lerp( lightColor, color, frac );
-				} 
+				}
 				renderLight.shaderParms[SHADERPARM_RED] = color.x;
 				renderLight.shaderParms[SHADERPARM_GREEN] = color.y;
 				renderLight.shaderParms[SHADERPARM_BLUE] = color.z;
-			} 
+			}
 			gameRenderWorld->UpdateLightDef( lightDefHandle, &renderLight );
 		} else {
 			lightDefHandle = gameRenderWorld->AddLightDef( &renderLight );
@@ -829,9 +832,9 @@ void idProjectile::Explode( const trace_t &collision, idEntity *ignore ) {
 
 	if ( fxname && *fxname ) {
 		SetModel( fxname );
-		renderEntity.shaderParms[SHADERPARM_RED] = 
-		renderEntity.shaderParms[SHADERPARM_GREEN] = 
-		renderEntity.shaderParms[SHADERPARM_BLUE] = 
+		renderEntity.shaderParms[SHADERPARM_RED] =
+		renderEntity.shaderParms[SHADERPARM_GREEN] =
+		renderEntity.shaderParms[SHADERPARM_BLUE] =
 		renderEntity.shaderParms[SHADERPARM_ALPHA] = 1.0f;
 		renderEntity.shaderParms[SHADERPARM_TIMEOFFSET] = -MS2SEC( gameLocal.time );
 		renderEntity.shaderParms[SHADERPARM_DIVERSITY] = gameLocal.random.CRandomFloat();
@@ -1095,7 +1098,7 @@ void idProjectile::WriteToSnapshot( idBitMsgDelta &msg ) const {
 
 		msg.WriteDeltaFloat( 0.0f, velocity[0], RB_VELOCITY_EXPONENT_BITS, RB_VELOCITY_MANTISSA_BITS );
 		msg.WriteDeltaFloat( 0.0f, velocity[1], RB_VELOCITY_EXPONENT_BITS, RB_VELOCITY_MANTISSA_BITS );
-		msg.WriteDeltaFloat( 0.0f, velocity[2], RB_VELOCITY_EXPONENT_BITS, RB_VELOCITY_MANTISSA_BITS );		
+		msg.WriteDeltaFloat( 0.0f, velocity[2], RB_VELOCITY_EXPONENT_BITS, RB_VELOCITY_MANTISSA_BITS );
 	}
 }
 
@@ -1340,7 +1343,7 @@ void idGuidedProjectile::Think( void ) {
 	int			i;
 
 	if ( state == LAUNCHED && !unGuided ) {
-		
+
 		GetSeekPos( seekPos );
 
 		if ( rndUpdateTime < gameLocal.time ) {
@@ -1416,7 +1419,7 @@ void idGuidedProjectile::Launch( const idVec3 &start, const idVec3 &dir, const i
 			gameLocal.clip.TracePoint( tr, start, end, MASK_SHOT_RENDERMODEL | CONTENTS_BODY, owner.GetEntity() );
 			if ( tr.fraction < 1.0f ) {
 				enemy = gameLocal.GetTraceEntity( tr );
-			} 
+			}
 			// ignore actors on the player's team
 			if ( enemy.GetEntity() == NULL || !enemy.GetEntity()->IsType( idActor::Type ) || ( static_cast<idActor *>( enemy.GetEntity() )->team == player->team ) ) {
 				enemy = player->EnemyWithMostHealth();
@@ -1559,13 +1562,13 @@ void idSoulCubeMissile::Think( void ) {
 				if ( !gameLocal.smokeParticles->EmitSmoke( smokeKill, smokeKillTime, gameLocal.random.CRandomFloat(), orbitOrg, mat3_identity ) ) {
 					smokeKillTime = gameLocal.time;
 				}
-			} 
+			}
 		} else  {
 			if ( accelTime && gameLocal.time < launchTime + accelTime * 1000 ) {
 				pct = ( gameLocal.time - launchTime ) / ( accelTime * 1000 );
 				speed = ( startingVelocity + ( startingVelocity + endingVelocity ) * pct ).Length();
-			} 
-		} 
+			}
+		}
 		idGuidedProjectile::Think();
 		GetSeekPos( seekPos );
 		if ( ( seekPos - physicsObj.GetOrigin() ).Length() < 32.0f ) {
@@ -1602,7 +1605,7 @@ void idSoulCubeMissile::GetSeekPos( idVec3 &out ) {
 	if ( destOrg != vec3_zero ) {
 		out = destOrg;
 		return;
-	} 
+	}
 	idGuidedProjectile::GetSeekPos( out );
 }
 
@@ -1648,7 +1651,7 @@ void idSoulCubeMissile::Launch( const idVec3 &start, const idVec3 &dir, const id
 	launchTime = gameLocal.time;
 	killPhase = false;
 	UpdateVisuals();
-	
+
 	ownerEnt = owner.GetEntity();
 	if ( ownerEnt && ownerEnt->IsType( idPlayer::Type ) ) {
 		static_cast<idPlayer *>( ownerEnt )->SetSoulCubeProjectile( this );
@@ -1809,9 +1812,9 @@ void idBFGProjectile::Think( void ) {
 			beamTargets[i].renderEntity.shaderParms[ SHADERPARM_BEAM_END_X ] = org.x;
 			beamTargets[i].renderEntity.shaderParms[ SHADERPARM_BEAM_END_Y ] = org.y;
 			beamTargets[i].renderEntity.shaderParms[ SHADERPARM_BEAM_END_Z ] = org.z;
-			beamTargets[i].renderEntity.shaderParms[ SHADERPARM_RED ] = 
-			beamTargets[i].renderEntity.shaderParms[ SHADERPARM_GREEN ] = 
-			beamTargets[i].renderEntity.shaderParms[ SHADERPARM_BLUE ] = 
+			beamTargets[i].renderEntity.shaderParms[ SHADERPARM_RED ] =
+			beamTargets[i].renderEntity.shaderParms[ SHADERPARM_GREEN ] =
+			beamTargets[i].renderEntity.shaderParms[ SHADERPARM_BLUE ] =
 			beamTargets[i].renderEntity.shaderParms[ SHADERPARM_ALPHA ] = 1.0f;
 			if ( gameLocal.time > nextDamageTime ) {
 				bool bfgVision = true;
@@ -1820,9 +1823,9 @@ void idBFGProjectile::Think( void ) {
 					org.Normalize();
 					beamTargets[i].target.GetEntity()->Damage( this, owner.GetEntity(), org, damageFreq, ( damagePower ) ? damagePower : 1.0f, INVALID_JOINT );
 				} else {
-					beamTargets[i].renderEntity.shaderParms[ SHADERPARM_RED ] = 
-					beamTargets[i].renderEntity.shaderParms[ SHADERPARM_GREEN ] = 
-					beamTargets[i].renderEntity.shaderParms[ SHADERPARM_BLUE ] = 
+					beamTargets[i].renderEntity.shaderParms[ SHADERPARM_RED ] =
+					beamTargets[i].renderEntity.shaderParms[ SHADERPARM_GREEN ] =
+					beamTargets[i].renderEntity.shaderParms[ SHADERPARM_BLUE ] =
 					beamTargets[i].renderEntity.shaderParms[ SHADERPARM_ALPHA ] = 0.0f;
 					bfgVision = false;
 				}
@@ -1866,7 +1869,7 @@ void idBFGProjectile::Launch( const idVec3 &start, const idVec3 &dir, const idVe
 	idProjectile::Launch( start, dir, pushVelocity, 0.0f, power, dmgPower );
 
 	// dmgPower * radius is the target acquisition area
-	// acquisition should make sure that monsters are not dormant 
+	// acquisition should make sure that monsters are not dormant
 	// which will cut down on hitting monsters not actively fighting
 	// but saves on the traces making sure they are visible
 	// damage is not applied until the projectile explodes
@@ -2157,7 +2160,7 @@ void idDebris::Launch( void ) {
 
 	spawnArgs.GetVector( "velocity", "0 0 0", velocity );
 	spawnArgs.GetAngles( "angular_velocity", "0 0 0", angular_velocity );
-	
+
 	linear_friction		= spawnArgs.GetFloat( "linear_friction" );
 	angular_friction	= spawnArgs.GetFloat( "angular_friction" );
 	contact_friction	= spawnArgs.GetFloat( "contact_friction" );

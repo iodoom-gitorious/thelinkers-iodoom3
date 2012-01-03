@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,12 +26,10 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../../../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
+#include "framework/FileSystem.h"
 
-#include "Brush.h"
-#include "BrushBSP.h"
-
+#include "tools/compilers/aas/BrushBSP.h"
 
 #define BSP_GRID_SIZE					512.0f
 #define SPLITTER_EPSILON				0.1f
@@ -42,7 +40,6 @@ If you have questions concerning this license or the applicable additional terms
 #define PORTAL_PLANE_DIST_EPSILON		0.01f
 
 //#define OUPUT_BSP_STATS_PER_GRID_CELL
-
 
 //===============================================================
 //
@@ -90,7 +87,7 @@ void idBrushBSPPortal::AddToNodes( idBrushBSPNode *front, idBrushBSPNode *back )
 	nodes[0] = front;
 	next[0] = front->portals;
 	front->portals = this;
-	
+
 	nodes[1] = back;
 	next[1] = back->portals;
 	back->portals = this;
@@ -127,13 +124,13 @@ void idBrushBSPPortal::RemoveFromNode( idBrushBSPNode *l ) {
 			common->Error( "idBrushBSPPortal::RemoveFromNode: portal not bounding node" );
 		}
 	}
-	
+
 	if ( nodes[0] == l ) {
 		*pp = next[0];
 		nodes[0] = NULL;
 	}
 	else if ( nodes[1] == l ) {
-		*pp = next[1];	
+		*pp = next[1];
 		nodes[1] = NULL;
 	}
 	else {
@@ -1116,7 +1113,7 @@ idBrushBSP::MakeNodePortal
 void idBrushBSP::MakeNodePortal( idBrushBSPNode *node ) {
 	idBrushBSPPortal *newPortal, *p;
 	idWinding *w;
-	int side;
+	int side = 0;
 
 	w = BaseWindingForNode( node );
 
@@ -1179,6 +1176,7 @@ void idBrushBSP::SplitNodePortals( idBrushBSPNode *node ) {
 		}
 		else {
 			common->Error( "idBrushBSP::SplitNodePortals: mislinked portal" );
+			return;
 		}
 		nextPortal = p->next[side];
 
@@ -1226,7 +1224,7 @@ void idBrushBSP::SplitNodePortals( idBrushBSPNode *node ) {
 			}
 			continue;
 		}
-		
+
 		// the winding is split
 		newPortal = new idBrushBSPPortal();
 		*newPortal = *p;
@@ -1293,7 +1291,6 @@ void idBrushBSP::MakeOutsidePortals( void ) {
 	idBounds bounds;
 	idBrushBSPPortal *p, *portals[6];
 	idVec3 normal;
-	idPlane planes[6];
 
 	// pad with some space so there will never be null volume leaves
 	bounds = treeBounds.Expand( 32 );
@@ -1326,7 +1323,7 @@ void idBrushBSP::MakeOutsidePortals( void ) {
 			portals[n] = p;
 		}
 	}
-		
+
 	// clip the base windings with all the other planes
 	for ( i = 0; i < 6; i++ ) {
 		for ( j = 0; j < 6; j++ ) {
@@ -1364,8 +1361,8 @@ void idBrushBSP::LeakFile( const idStr &fileName ) {
 	int count, next, s;
 	idVec3 mid;
 	idFile *lineFile;
-	idBrushBSPNode *node, *nextNode;
-	idBrushBSPPortal *p, *nextPortal;
+	idBrushBSPNode *node, *nextNode = NULL;
+	idBrushBSPPortal *p, *nextPortal = NULL;
 	idStr qpath, name;
 
 	if ( !outside->occupied ) {
@@ -1418,13 +1415,13 @@ void idBrushBSP::FloodThroughPortals_r( idBrushBSPNode *node, int contents, int 
 	idBrushBSPPortal *p;
 	int s;
 
-	if ( node->occupied ) {
-		common->Error( "FloodThroughPortals_r: node already occupied\n" );
-	}
 	if ( !node ) {
 		common->Error( "FloodThroughPortals_r: NULL node\n" );
 	}
 
+	if ( node->occupied ) {
+		common->Error( "FloodThroughPortals_r: node already occupied\n" );
+	}
 	node->occupied = depth;
 
 	for ( p = node->portals; p; p = p->next[s] ) {
@@ -1663,7 +1660,7 @@ void idBrushBSP::MergeLeafNodePortals( idBrushBSPNode *node, int skipContents ) 
 			nextp2 = p2->Next(s2);
 
 			// if both portals seperate the same leaf nodes
-			if ( p1->nodes[!s1] == p2->nodes[!s2] ) { 
+			if ( p1->nodes[!s1] == p2->nodes[!s2] ) {
 
 				// add the winding of p2 to the winding of p1
 				p1->winding->AddToConvexHull( p2->winding, p1->plane.Normal() );
@@ -1943,7 +1940,7 @@ bool idBrushBSP::TryMergeLeafNodes( idBrushBSPPortal *portal, int side ) {
 	for ( p = node1->portals; p; p = nextp ) {
 		s = (p->nodes[1] == node1);
 		nextp = p->next[s];
-		
+
 		if ( p->nodes[!s] == node2 ) {
 			p->RemoveFromNode( p->nodes[0] );
 			p->RemoveFromNode( p->nodes[1] );
@@ -1995,7 +1992,7 @@ void idBrushBSP::MeltFlood_r( idBrushBSPNode *node, int skipContents, idBounds &
 
 	for ( p1 = node->GetPortals(); p1; p1 = p1->Next(s1) ) {
 		s1 = (p1->GetNode(1) == node);
-	
+
 		if ( p1->GetNode( !s1 )->GetFlags() & NODE_VISITED ) {
 			continue;
 		}

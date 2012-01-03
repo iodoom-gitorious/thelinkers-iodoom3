@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -25,12 +25,7 @@ If you have questions concerning this license or the applicable additional terms
 
 ===========================================================================
 */
-#include "../../idlib/precompiled.h"
-#include "../posix/posix_public.h"
-#include "../sys_local.h"
-#include "local.h"
 
-#include <pthread.h>
 #include <errno.h>
 #include <unistd.h>
 #include <sys/stat.h>
@@ -40,6 +35,16 @@ If you have questions concerning this license or the applicable additional terms
 #ifdef ID_MCHECK
 #include <mcheck.h>
 #endif
+
+#include <SDL_main.h>
+
+#include "sys/platform.h"
+#include "framework/Licensee.h"
+#include "framework/FileSystem.h"
+#include "sys/posix/posix_public.h"
+#include "sys/sys_local.h"
+
+#include "sys/linux/local.h"
 
 static idStr	basepath;
 static idStr	savepath;
@@ -51,64 +56,6 @@ Sys_InitScanTable
 */
 void Sys_InitScanTable( void ) {
 	common->DPrintf( "TODO: Sys_InitScanTable\n" );
-}
-
-/*
-=================
-Sys_AsyncThread
-=================
-*/
-void Sys_AsyncThread( void ) {
-	int now;
-	int next;
-	int	want_sleep;
-
-	// multi tick compensate for poor schedulers (Linux 2.4)
-	int ticked, to_ticked;
-	now = Sys_Milliseconds();
-	ticked = now >> 4;
-	while (1) {
-		// sleep
-		now = Sys_Milliseconds();		
-		next = ( now & 0xFFFFFFF0 ) + 0x10;
-		want_sleep = ( next-now-1 ) * 1000;
-		if ( want_sleep > 0 ) {
-			usleep( want_sleep ); // sleep 1ms less than true target
-		}
-		
-		// compensate if we slept too long
-		now = Sys_Milliseconds();
-		to_ticked = now >> 4;
-		
-		// show ticking statistics - every 100 ticks, print a summary
-		#if 0
-			#define STAT_BUF 100
-			static int stats[STAT_BUF];
-			static int counter = 0;
-			// how many ticks to play
-			stats[counter] = to_ticked - ticked;
-			counter++;
-			if (counter == STAT_BUF) {
-				Sys_DebugPrintf("\n");
-				for( int i = 0; i < STAT_BUF; i++) {
-					if ( ! (i & 0xf) ) {
-						Sys_DebugPrintf("\n");
-					}
-					Sys_DebugPrintf( "%d ", stats[i] );
-				}
-				Sys_DebugPrintf("\n");
-				counter = 0;
-			}
-		#endif
-		
-		while ( ticked < to_ticked ) {
-			common->Async();
-			ticked++;
-			Sys_TriggerEvent( TRIGGER_EVENT_ONE );
-		}
-		// thread exit
-		pthread_testcancel();
-	}
 }
 
 /*
@@ -139,7 +86,7 @@ const char *Sys_EXEPath( void ) {
 	len = readlink( linkpath.c_str(), buf, sizeof( buf ) );
 	if ( len == -1 ) {
 		Sys_Printf("couldn't stat exe path link %s\n", linkpath.c_str());
-		buf[ len ] = '\0';
+		buf[ 0 ] = '\0';
 	}
 	return buf;
 }
@@ -203,24 +150,6 @@ void Sys_Shutdown( void ) {
 
 /*
 ===============
-Sys_GetProcessorId
-===============
-*/
-cpuid_t Sys_GetProcessorId( void ) {
-	return CPUID_GENERIC;
-}
-
-/*
-===============
-Sys_GetProcessorString
-===============
-*/
-const char *Sys_GetProcessorString( void ) {
-	return "generic";
-}
-
-/*
-===============
 Sys_FPU_EnableExceptions
 ===============
 */
@@ -238,99 +167,6 @@ void Sys_FPE_handler( int signum, siginfo_t *info, void *context ) {
 }
 
 /*
-===============
-Sys_GetClockticks
-===============
-*/
-double Sys_GetClockTicks( void ) {
-#if defined( __i386__ )
-	unsigned long lo, hi;
-
-	__asm__ __volatile__ (
-						  "push %%ebx\n"			\
-						  "xor %%eax,%%eax\n"		\
-						  "cpuid\n"					\
-						  "rdtsc\n"					\
-						  "mov %%eax,%0\n"			\
-						  "mov %%edx,%1\n"			\
-						  "pop %%ebx\n"
-						  : "=r" (lo), "=r" (hi) );
-	return (double) lo + (double) 0xFFFFFFFF * hi;
-#else
-#error unsupported CPU
-#endif
-}
-
-/*
-===============
-MeasureClockTicks
-===============
-*/
-double MeasureClockTicks( void ) {
-	double t0, t1;
-
-	t0 = Sys_GetClockTicks( );
-	Sys_Sleep( 1000 );
-	t1 = Sys_GetClockTicks( );	
-	return t1 - t0;
-}
-
-/*
-===============
-Sys_ClockTicksPerSecond
-===============
-*/
-double Sys_ClockTicksPerSecond(void) {
-	static bool		init = false;
-	static double	ret;
-
-	int		fd, len, pos, end;
-	char	buf[ 4096 ];
-
-	if ( init ) {
-		return ret;
-	}
-
-	fd = open( "/proc/cpuinfo", O_RDONLY );
-	if ( fd == -1 ) {
-		common->Printf( "couldn't read /proc/cpuinfo\n" );
-		ret = MeasureClockTicks();
-		init = true;
-		common->Printf( "measured CPU frequency: %g MHz\n", ret / 1000000.0 );
-		return ret;		
-	}
-	len = read( fd, buf, 4096 );
-	close( fd );
-	pos = 0;
-	while ( pos < len ) {
-		if ( !idStr::Cmpn( buf + pos, "cpu MHz", 7 ) ) {
-			pos = strchr( buf + pos, ':' ) - buf + 2;
-			end = strchr( buf + pos, '\n' ) - buf;
-			if ( pos < len && end < len ) {
-				buf[end] = '\0';
-				ret = atof( buf + pos );
-			} else {
-				common->Printf( "failed parsing /proc/cpuinfo\n" );
-				ret = MeasureClockTicks();
-				init = true;
-				common->Printf( "measured CPU frequency: %g MHz\n", ret / 1000000.0 );
-				return ret;		
-			}
-			common->Printf( "/proc/cpuinfo CPU frequency: %g MHz\n", ret );
-			ret *= 1000000;
-			init = true;
-			return ret;
-		}
-		pos = strchr( buf + pos, '\n' ) - buf + 1;
-	}
-	common->Printf( "failed parsing /proc/cpuinfo\n" );
-	ret = MeasureClockTicks();
-	init = true;
-	common->Printf( "measured CPU frequency: %g MHz\n", ret / 1000000.0 );
-	return ret;		
-}
-
-/*
 ================
 Sys_GetSystemRam
 returns in megabytes
@@ -344,7 +180,7 @@ int Sys_GetSystemRam( void ) {
 	if ( count == -1 ) {
 		common->Printf( "GetSystemRam: sysconf _SC_PHYS_PAGES failed\n" );
 		return 512;
-	}	
+	}
 	page_size = sysconf( _SC_PAGE_SIZE );
 	if ( page_size == -1 ) {
 		common->Printf( "GetSystemRam: sysconf _SC_PAGE_SIZE failed\n" );
@@ -365,7 +201,7 @@ the no-fork lets you keep the terminal when you're about to spawn an installer
 if the command contains spaces, system() is used. Otherwise the more straightforward execl ( system() blows though )
 ==================
 */
-void Sys_DoStartProcess( const char *exeName, bool dofork ) {	
+void Sys_DoStartProcess( const char *exeName, bool dofork ) {
 	bool use_system = false;
 	if ( strchr( exeName, ' ' ) ) {
 		use_system = true;
@@ -383,12 +219,13 @@ void Sys_DoStartProcess( const char *exeName, bool dofork ) {
 	if ( dofork ) {
 		switch ( fork() ) {
 		case -1:
-			// main thread
+			printf( "fork failed: %s\n", strerror( errno ) );
 			break;
 		case 0:
 			if ( use_system ) {
 				printf( "system %s\n", exeName );
-				system( exeName );
+				if (system( exeName ) == -1)
+					printf( "system failed: %s\n", strerror( errno ) );
 				_exit( 0 );
 			} else {
 				printf( "execl %s\n", exeName );
@@ -397,12 +234,16 @@ void Sys_DoStartProcess( const char *exeName, bool dofork ) {
 				_exit( -1 );
 			}
 			break;
+		default:
+			break;
 		}
 	} else {
 		if ( use_system ) {
 			printf( "system %s\n", exeName );
-			system( exeName );
-			sleep( 1 );	// on some systems I've seen that starting the new process and exiting this one should not be too close
+			if (system( exeName ) == -1)
+				printf( "system failed: %s\n", strerror( errno ) );
+			else
+				sleep( 1 );	// on some systems I've seen that starting the new process and exiting this one should not be too close
 		} else {
 			printf( "execl %s\n", exeName );
 			execl( exeName, exeName, NULL );
@@ -431,7 +272,7 @@ void idSysLocal::OpenURL( const char *url, bool quit ) {
 	}
 
 	common->Printf( "Open URL: %s\n", url );
-	// opening an URL on *nix can mean a lot of things .. 
+	// opening an URL on *nix can mean a lot of things ..
 	// just spawn a script instead of deciding for the user :-)
 
 	// look in the savepath first, then in the basepath
@@ -468,52 +309,6 @@ void idSysLocal::OpenURL( const char *url, bool quit ) {
 void Sys_DoPreferences( void ) { }
 
 /*
-================
-Sys_FPU_SetDAZ
-================
-*/
-void Sys_FPU_SetDAZ( bool enable ) {
-	/*
-	DWORD dwData;
-
-	_asm {
-		movzx	ecx, byte ptr enable
-		and		ecx, 1
-		shl		ecx, 6
-		STMXCSR	dword ptr dwData
-		mov		eax, dwData
-		and		eax, ~(1<<6)	// clear DAX bit
-		or		eax, ecx		// set the DAZ bit
-		mov		dwData, eax
-		LDMXCSR	dword ptr dwData
-	}
-	*/
-}
-
-/*
-================
-Sys_FPU_SetFTZ
-================
-*/
-void Sys_FPU_SetFTZ( bool enable ) {
-	/*
-	DWORD dwData;
-
-	_asm {
-		movzx	ecx, byte ptr enable
-		and		ecx, 1
-		shl		ecx, 15
-		STMXCSR	dword ptr dwData
-		mov		eax, dwData
-		and		eax, ~(1<<15)	// clear FTZ bit
-		or		eax, ecx		// set the FTZ bit
-		mov		dwData, eax
-		LDMXCSR	dword ptr dwData
-	}
-	*/
-}
-
-/*
 ===============
 mem consistency stuff
 ===============
@@ -542,19 +337,19 @@ void abrt_func( mcheck_status status ) {
 main
 ===============
 */
-int main(int argc, const char **argv) {
+int main(int argc, char **argv) {
 #ifdef ID_MCHECK
 	// must have -lmcheck linkage
 	mcheck( abrt_func );
 	Sys_Printf( "memory consistency checking enabled\n" );
 #endif
-	
+
 	Posix_EarlyInit( );
 
 	if ( argc > 1 ) {
-		common->Init( argc-1, &argv[1], NULL );
+		common->Init( argc-1, &argv[1] );
 	} else {
-		common->Init( 0, NULL, NULL );
+		common->Init( 0, NULL );
 	}
 
 	Posix_LateInit( );

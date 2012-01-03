@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -25,8 +25,7 @@ If you have questions concerning this license or the applicable additional terms
 
 ===========================================================================
 */
-#include "../../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -40,24 +39,16 @@ If you have questions concerning this license or the applicable additional terms
 
 #define	MAX_OSPATH			256
 
-static	int		frameNum;
+static	unsigned int		frameNum;
 
-int Sys_Milliseconds( void ) {
+unsigned int Sys_Milliseconds( void ) {
 	return frameNum * 16;
-}
-
-double Sys_GetClockTicks( void ) {
-	return frameNum * 16.0;
-}
-
-double Sys_ClockTicksPerSecond( void ) {
-	return 1000.0;
 }
 
 void	Sys_Sleep( int msec ) {
 }
 
-void	Sys_CreateThread(  xthread_t function, void *parms, xthreadPriority priority, xthreadInfo& info ) {
+void	Sys_CreateThread( xthread_t function, void *parms, xthreadInfo& info, const char *name ) {
 }
 
 void Sys_DestroyThread( xthreadInfo& info ) {
@@ -106,11 +97,6 @@ void idPort::SendPacket( const netadr_t to, const void *data, int size ) {
 }
 
 //==========================================================
-
-double	idTimer::base;
-
-void idTimer::InitBaseClockTicks( void ) const {
-}
 
 //==========================================================
 
@@ -173,12 +159,12 @@ int Sys_ListFiles( const char *directory, const char *extension, idStrList &list
 		if (stat(search, &st) == -1)
 			continue;
 		if (!dironly) {
-		    idStr look(search);
-		    idStr ext;
-		    look.ExtractFileExtension( ext );
-		    if ( extension && extension[0] && ext.Icmp( &extension[1] ) != 0 ) {
+			idStr look(search);
+			idStr ext;
+			look.ExtractFileExtension( ext );
+			if ( extension && extension[0] && ext.Icmp( &extension[1] ) != 0 ) {
 			continue;
-		    }
+			}
 		}
 		if ((dironly && !(st.st_mode & S_IFDIR)) ||
 			(!dironly && (st.st_mode & S_IFDIR)))

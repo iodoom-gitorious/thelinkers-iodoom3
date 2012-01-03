@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,12 +26,11 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
+#include "renderer/tr_local.h"
+#include "renderer/Model_local.h"
 
-#include "Model_local.h"
-#include "tr_local.h"
-
+#include "renderer/ModelOverlay.h"
 
 /*
 ====================
@@ -103,7 +102,6 @@ may extend well past the 0.0 to 1.0 texture range
 */
 void idRenderModelOverlay::CreateOverlay( const idRenderModel *model, const idPlane localTextureAxis[2], const idMaterial *mtr ) {
 	int i, maxVerts, maxIndexes, surfNum;
-	idRenderModelOverlay *overlay = NULL;
 
 	// count up the maximum possible vertices and indexes per surface
 	maxVerts = 0;
@@ -210,7 +208,7 @@ void idRenderModelOverlay::CreateOverlay( const idRenderModel *model, const idPl
 			}
 		}
 		if ( i < materials.Num() ) {
-            materials[i]->surfaces.Append( s );
+			materials[i]->surfaces.Append( s );
 		} else {
 			overlayMaterial_t *mat = new overlayMaterial_t;
 			mat->material = mtr;

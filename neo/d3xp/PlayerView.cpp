@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,10 +26,15 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
+#include "renderer/RenderWorld.h"
 
-#include "Game_local.h"
+#include "gamesys/SysCvar.h"
+#include "gamesys/SaveGame.h"
+#include "GameBase.h"
+#include "Player.h"
+
+#include "PlayerView.h"
 
 // _D3XP : rename all gameLocal.time to gameLocal.slow.time for merge!
 
@@ -168,7 +173,7 @@ void idPlayerView::Restore( idRestoreGame *savefile ) {
 	savefile->ReadInt( dvFinishTime );
 	savefile->ReadMaterial( dvMaterial );
 	savefile->ReadInt( kickFinishTime );
-	savefile->ReadAngles( kickAngles );			
+	savefile->ReadAngles( kickAngles );
 	savefile->ReadBool( bfgVision );
 
 	savefile->ReadMaterial( tunnelMaterial );
@@ -310,7 +315,7 @@ void idPlayerView::DamageImpulse( idVec3 localKickDir, const idDict *damageDef )
 		blob->x += ( gameLocal.random.RandomInt()&63 ) - 32;
 		blob->y = damageDef->GetFloat( "blob_y" );
 		blob->y += ( gameLocal.random.RandomInt()&63 ) - 32;
-		
+
 		float scale = ( 256 + ( ( gameLocal.random.RandomInt()&63 ) - 32 ) ) / 256.0f;
 		blob->w = damageDef->GetFloat( "blob_width" ) * g_blobSize.GetFloat() * scale;
 		blob->h = damageDef->GetFloat( "blob_height" ) * g_blobSize.GetFloat() * scale;
@@ -392,7 +397,7 @@ void idPlayerView::WeaponFireFeedback( const idDict *weaponDef ) {
 		kickAngles = angles;
 		int	finish = gameLocal.slow.time + g_kickTime.GetFloat() * recoilTime;
 		kickFinishTime = finish;
-	}	
+	}
 
 }
 
@@ -429,7 +434,7 @@ idMat3 idPlayerView::ShakeAxis() const {
 ===================
 idPlayerView::AngleOffset
 
-  kickVector, a world space direction that the attack should 
+  kickVector, a world space direction that the attack should
 ===================
 */
 idAngles idPlayerView::AngleOffset() const {
@@ -530,7 +535,7 @@ void idPlayerView::SingleView( idUserInterface *hud, const renderView_t *view ) 
 			if ( blob->finishTime <= gameLocal.slow.time ) {
 				continue;
 			}
-			
+
 			blob->y += blob->driftAmount;
 
 			float	fade = (float)( blob->finishTime - gameLocal.slow.time ) / ( blob->finishTime - blob->startFadeTime );
@@ -577,7 +582,7 @@ void idPlayerView::SingleView( idUserInterface *hud, const renderView_t *view ) 
 			renderSystem->SetColor4( 1.0f, 1.0f, 1.0f, 1.0f );
 			renderSystem->DrawStretchPic( 0.0f, 0.0f, 640.0f, 480.0f, 0.0f, 0.0f, 1.0f, 1.0f, bfgMaterial );
 		}
-		
+
 	}
 
 	// test a single material drawn over everything
@@ -690,7 +695,7 @@ void idPlayerView::RenderPlayerView( idUserInterface *hud ) {
 	if ( net_clientLagOMeter.GetBool() && lagoMaterial && gameLocal.isClient ) {
 		renderSystem->SetColor4( 1.0f, 1.0f, 1.0f, 1.0f );
 		renderSystem->DrawStretchPic( 10.0f, 380.0f, 64.0f, 64.0f, 0.0f, 0.0f, 1.0f, 1.0f, lagoMaterial );
-	}	
+	}
 }
 
 #ifdef _D3XP
@@ -1263,7 +1268,7 @@ void FullscreenFX_Warp::HighQuality() {
 		p.center.y = center.y;
 		p.center.z = p.center.x / 640.f;
 		p.center.w = 1 - ( p.center.y / 480.f );
- 
+
 		// draw it
 		DrawWarp( p, interp );
 	}
@@ -1377,7 +1382,7 @@ void FullscreenFX_DoubleVision::HighQuality() {
 		color.z = 0;
 	}
 
-	if ( !gameLocal.isMultiplayer && gameLocal.fast.time < player->inventory.powerupEndTime[ HELLTIME ] || gameLocal.fast.time < player->inventory.powerupEndTime[ INVULNERABILITY ]) {
+	if ( !gameLocal.isMultiplayer && (gameLocal.fast.time < player->inventory.powerupEndTime[ HELLTIME ] || gameLocal.fast.time < player->inventory.powerupEndTime[ INVULNERABILITY ])) {
 		color.y = 0;
 		color.z = 0;
 	}
@@ -1690,7 +1695,7 @@ void FullscreenFXManager::Initialize( idPlayerView *pv ) {
 	renderSystem->CaptureRenderToImage( "_accum" );
 	renderSystem->UnCrop();
 
-    renderSystem->CropRenderSize( 512, 256, true );
+	renderSystem->CropRenderSize( 512, 256, true );
 	renderSystem->CaptureRenderToImage( "_scratch" );
 	renderSystem->UnCrop();
 
@@ -1756,7 +1761,6 @@ FullscreenFXManager::Process
 */
 void FullscreenFXManager::Process( const renderView_t *view ) {
 	bool allpass = false;
-	bool atLeastOneFX = false;
 
 	if ( g_testFullscreenFX.GetInteger() == -2 ) {
 		allpass = true;
@@ -1808,8 +1812,6 @@ void FullscreenFXManager::Process( const renderView_t *view ) {
 
 		// do the actual drawing
 		if ( drawIt ) {
-			atLeastOneFX = true;
-
 			// we need to dump to _currentRender
 			CaptureCurrentRender();
 

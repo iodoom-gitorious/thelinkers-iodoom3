@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -25,14 +25,13 @@ If you have questions concerning this license or the applicable additional terms
 
 ===========================================================================
 */
-#include "../../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
 
-#include "../../renderer/tr_local.h"
+#include "renderer/tr_local.h"
 
 void glAccum(GLenum op, GLfloat value){};
 void glAlphaFunc(GLenum func, GLclampf ref){};
-GLboolean glAreTexturesResident(GLsizei n, const GLuint *textures, GLboolean *residences){};
+GLboolean glAreTexturesResident(GLsizei n, const GLuint *textures, GLboolean *residences){ return false; };
 void glArrayElement(GLint i){};
 void glBegin(GLenum mode){};
 void glBindTexture(GLenum target, GLuint texture){};
@@ -184,9 +183,9 @@ void glIndexub(GLubyte c){};
 void glIndexubv(const GLubyte *c){};
 void glInitNames(void){};
 void glInterleavedArrays(GLenum format, GLsizei stride, const GLvoid *pointer){};
-GLboolean glIsEnabled(GLenum cap){};
-GLboolean glIsList(GLuint list){};
-GLboolean glIsTexture(GLuint texture){};
+GLboolean glIsEnabled(GLenum cap){ return false; };
+GLboolean glIsList(GLuint list){ return false; };
+GLboolean glIsTexture(GLuint texture){ return false; };
 void glLightModelf(GLenum pname, GLfloat param){};
 void glLightModelfv(GLenum pname, const GLfloat *params){};
 void glLightModeli(GLenum pname, GLint param){};
@@ -287,7 +286,7 @@ void glRecti(GLint x1, GLint y1, GLint x2, GLint y2){};
 void glRectiv(const GLint *v1, const GLint *v2){};
 void glRects(GLshort x1, GLshort y1, GLshort x2, GLshort y2){};
 void glRectsv(const GLshort *v1, const GLshort *v2){};
-GLint glRenderMode(GLenum mode){};
+GLint glRenderMode(GLenum mode){ return 0; };
 void glRotated(GLdouble angle, GLdouble x, GLdouble y, GLdouble z){};
 void glRotatef(GLfloat angle, GLfloat x, GLfloat y, GLfloat z){};
 void glScaled(GLdouble x, GLdouble y, GLdouble z){};

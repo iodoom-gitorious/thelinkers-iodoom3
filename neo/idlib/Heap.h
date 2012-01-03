@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -29,6 +29,9 @@ If you have questions concerning this license or the applicable additional terms
 #ifndef __HEAP_H__
 #define __HEAP_H__
 
+#include "idlib/Lib.h"
+#include "sys/sys_public.h"
+
 /*
 ===============================================================================
 
@@ -37,7 +40,7 @@ If you have questions concerning this license or the applicable additional terms
 	This is a replacement for the compiler heap code (i.e. "C" malloc() and
 	free() calls). On average 2.5-3.0 times faster than MSVC malloc()/free().
 	Worst case performance is 1.65 times faster and best case > 70 times.
- 
+
 ===============================================================================
 */
 
@@ -167,8 +170,8 @@ public:
 
 private:
 	typedef struct element_s {
-		struct element_s *	next;
 		type				t;
+		struct element_s *	next;
 	} element_t;
 	typedef struct block_s {
 		element_t			elements[blockSize];
@@ -214,7 +217,7 @@ type *idBlockAlloc<type,blockSize>::Alloc( void ) {
 
 template<class type, int blockSize>
 void idBlockAlloc<type,blockSize>::Free( type *t ) {
-	element_t *element = (element_t *)( ( (unsigned char *) t ) - ( (int) &((element_t *)0)->t ) );
+	element_t *element = (element_t *)t;
 	element->next = free;
 	free = element;
 	active--;

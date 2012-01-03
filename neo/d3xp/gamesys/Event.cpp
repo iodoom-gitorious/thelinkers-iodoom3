@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -25,17 +25,20 @@ If you have questions concerning this license or the applicable additional terms
 
 ===========================================================================
 */
+
+#include "sys/platform.h"
+#include "script/Script_Program.h"
+#include "Entity.h"
+#include "Game_local.h"
+
+#include "Event.h"
+
 /*
 sys_event.cpp
 
 Event are used for scheduling tasks and for linking script commands.
 
 */
-
-#include "../../idlib/precompiled.h"
-#pragma hdrstop
-
-#include "../Game_local.h"
 
 #define MAX_EVENTSPERFRAME			4096
 //#define CREATE_EVENT_CODE
@@ -92,15 +95,15 @@ idEventDef::idEventDef( const char *command, const char *formatspec, char return
 		switch( formatspec[ i ] ) {
 		case D_EVENT_FLOAT :
 			bits |= 1 << i;
-			argsize += sizeof( float );
+			argsize += sizeof( intptr_t );
 			break;
 
 		case D_EVENT_INTEGER :
-			argsize += sizeof( int );
+			argsize += sizeof( intptr_t );
 			break;
 
 		case D_EVENT_VECTOR :
-			argsize += sizeof( idVec3 );
+			argsize += E_EVENT_SIZEOF_VEC;
 			break;
 
 		case D_EVENT_STRING :
@@ -334,7 +337,7 @@ idEvent *idEvent::Alloc( const idEventDef *evdef, int numargs, va_list args ) {
 idEvent::CopyArgs
 ================
 */
-void idEvent::CopyArgs( const idEventDef *evdef, int numargs, va_list args, int data[ D_EVENT_MAXARGS ] ) {
+void idEvent::CopyArgs( const idEventDef *evdef, int numargs, va_list args, intptr_t data[ D_EVENT_MAXARGS ] ) {
 	int			i;
 	const char	*format;
 	idEventArg	*arg;
@@ -476,8 +479,8 @@ void idEvent::ClearEventList( void ) {
 	//
 	FreeEvents.Clear();
 	EventQueue.Clear();
-   
-	// 
+
+	//
 	// add the events to the free list
 	//
 	for( i = 0; i < MAX_EVENTS; i++ ) {
@@ -493,7 +496,7 @@ idEvent::ServiceEvents
 void idEvent::ServiceEvents( void ) {
 	idEvent		*event;
 	int			num;
-	int			args[ D_EVENT_MAXARGS ];
+	intptr_t	args[ D_EVENT_MAXARGS ];
 	int			offset;
 	int			i;
 	int			numargs;
@@ -593,7 +596,7 @@ idEvent::ServiceFastEvents
 void idEvent::ServiceFastEvents() {
 	idEvent	*event;
 	int		num;
-	int			args[ D_EVENT_MAXARGS ];
+	intptr_t	args[ D_EVENT_MAXARGS ];
 	int			offset;
 	int			i;
 	int			numargs;
@@ -733,7 +736,7 @@ void idEvent::Shutdown( void ) {
 	}
 
 	ClearEventList();
-	
+
 	eventDataAllocator.Shutdown();
 
 	// say it is now shutdown
@@ -752,6 +755,7 @@ void idEvent::Save( idSaveGame *savefile ) {
 	byte *dataPtr;
 	bool validTrace;
 	const char	*format;
+	idStr s;
 
 	savefile->WriteInt( EventQueue.Num() );
 
@@ -779,6 +783,12 @@ void idEvent::Save( idSaveGame *savefile ) {
 				case D_EVENT_VECTOR :
 					savefile->WriteVec3( *reinterpret_cast<idVec3 *>( dataPtr ) );
 					size += sizeof( idVec3 );
+					break;
+				case D_EVENT_STRING :
+					s.Clear();
+					s.Append(reinterpret_cast<char *>(dataPtr), MAX_STRING_LEN);
+					savefile->WriteString(s);
+					size += MAX_STRING_LEN;
 					break;
 				case D_EVENT_TRACE :
 					validTrace = *reinterpret_cast<bool *>( dataPtr );
@@ -833,6 +843,7 @@ void idEvent::Restore( idRestoreGame *savefile ) {
 	byte *dataPtr;
 	idEvent	*event;
 	const char	*format;
+	idStr s;
 
 	savefile->ReadInt( num );
 
@@ -866,7 +877,7 @@ void idEvent::Restore( idRestoreGame *savefile ) {
 		// read the args
 		savefile->ReadInt( argsize );
 		if ( argsize != event->eventdef->GetArgSize() ) {
-			savefile->Error( "idEvent::Restore: arg size (%d) doesn't match saved arg size(%d) on event '%s'", event->eventdef->GetArgSize(), argsize, event->eventdef->GetName() );
+			savefile->Error( "idEvent::Restore: arg size (%zd) doesn't match saved arg size(%d) on event '%s'", event->eventdef->GetArgSize(), argsize, event->eventdef->GetName() );
 		}
 		if ( argsize ) {
 			event->data = eventDataAllocator.Alloc( argsize );
@@ -888,6 +899,11 @@ void idEvent::Restore( idRestoreGame *savefile ) {
 					case D_EVENT_VECTOR :
 						savefile->ReadVec3( *reinterpret_cast<idVec3 *>( dataPtr ) );
 						size += sizeof( idVec3 );
+						break;
+					case D_EVENT_STRING :
+						savefile->ReadString(s);
+						idStr::Copynz(reinterpret_cast<char *>(dataPtr), s, MAX_STRING_LEN);
+						size += MAX_STRING_LEN;
 						break;
 					case D_EVENT_TRACE :
 						savefile->ReadBool( *reinterpret_cast<bool *>( dataPtr ) );
@@ -947,7 +963,7 @@ void idEvent::Restore( idRestoreGame *savefile ) {
 		// read the args
 		savefile->ReadInt( argsize );
 		if ( argsize != event->eventdef->GetArgSize() ) {
-			savefile->Error( "idEvent::Restore: arg size (%d) doesn't match saved arg size(%d) on event '%s'", event->eventdef->GetArgSize(), argsize, event->eventdef->GetName() );
+			savefile->Error( "idEvent::Restore: arg size (%zd) doesn't match saved arg size(%d) on event '%s'", event->eventdef->GetArgSize(), argsize, event->eventdef->GetName() );
 		}
 		if ( argsize ) {
 			event->data = eventDataAllocator.Alloc( argsize );
@@ -962,7 +978,7 @@ void idEvent::Restore( idRestoreGame *savefile ) {
 /*
  ================
  idEvent::ReadTrace
- 
+
  idRestoreGame has a ReadTrace procedure, but unfortunately idEvent wants the material
  string name at the of the data structure rather than in the middle
  ================
@@ -1016,8 +1032,6 @@ CreateEventCallbackHandler
 ================
 */
 void CreateEventCallbackHandler( void ) {
-	int num;
-	int count;
 	int i, j, k;
 	char argString[ D_EVENT_MAXARGS + 1 ];
 	idStr string1;
@@ -1046,7 +1060,7 @@ void CreateEventCallbackHandler( void ) {
 					string1 += "const float";
 					string2 += va( "*( float * )&data[ %d ]", k );
 				} else {
-					string1 += "const int";
+					string1 += "const intptr_t";
 					string2 += va( "data[ %d ]", k );
 				}
 

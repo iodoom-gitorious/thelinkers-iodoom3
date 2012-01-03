@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,12 +26,9 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../../../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
 
-#include "AASFile.h"
-#include "AASFile_local.h"
-#include "AASReach.h"
+#include "tools/compilers/aas/AASReach.h"
 
 #define INSIDEUNITS							2.0f
 #define INSIDEUNITS_WALKEND					0.5f
@@ -39,7 +36,6 @@ If you have questions concerning this license or the applicable additional terms
 #define INSIDEUNITS_SWIMEND					0.5f
 #define INSIDEUNITS_FLYEND					0.5f
 #define INSIDEUNITS_WATERJUMP				15.0f
-
 
 /*
 ================
@@ -286,10 +282,10 @@ idAASReach::Reachability_Step_Barrier_WaterJump_WalkOffLedge
 */
 bool idAASReach::Reachability_Step_Barrier_WaterJump_WalkOffLedge( int area1num, int area2num ) {
 	int i, j, k, l, edge1Num, edge2Num, areas[10];
-	int floor_bestArea1FloorEdgeNum, floor_bestArea2FloorEdgeNum, floor_foundReach;
-	int water_bestArea1FloorEdgeNum, water_bestArea2FloorEdgeNum, water_foundReach;
+	int floor_bestArea1FloorEdgeNum, floor_foundReach;
+	int water_foundReach;
 	int side1, faceSide1, floorFace1Num;
-	float dist, dist1, dist2, diff, invGravityDot, orthogonalDot;
+	float dist, dist1, dist2, diff, /*invGravityDot, */ orthogonalDot;
 	float x1, x2, x3, x4, y1, y2, y3, y4, tmp, y;
 	float length, floor_bestLength, water_bestLength, floor_bestDist, water_bestDist;
 	idVec3 v1, v2, v3, v4, tmpv, p1area1, p1area2, p2area1, p2area2;
@@ -299,7 +295,7 @@ bool idAASReach::Reachability_Step_Barrier_WaterJump_WalkOffLedge( int area1num,
 	idVec3 testPoint;
 	idPlane *plane;
 	aasArea_t *area1, *area2;
-	aasFace_t *floorFace1, *floorFace2, *floor_bestFace1, *water_bestFace1;
+	aasFace_t *floorFace1, *floorFace2;
 	aasEdge_t *edge1, *edge2;
 	idReachability_Walk *walkReach;
 	idReachability_BarrierJump *barrierJumpReach;
@@ -329,15 +325,22 @@ bool idAASReach::Reachability_Step_Barrier_WaterJump_WalkOffLedge( int area1num,
 		}
 	}
 
+	floor_bestArea1FloorEdgeNum = 0;
+
+	floor_bestStart.Zero();
+	floor_bestEnd.Zero();
+	floor_bestNormal.Zero();
+	water_bestStart.Zero();
+	water_bestEnd.Zero();
+	water_bestNormal.Zero();
+
 	floor_foundReach = false;
 	floor_bestDist = 99999;
 	floor_bestLength = 0;
-	floor_bestArea2FloorEdgeNum = 0;
 
 	water_foundReach = false;
 	water_bestDist = 99999;
 	water_bestLength = 0;
-	water_bestArea2FloorEdgeNum = 0;
 
 	for ( i = 0; i < area1->numFaces; i++ ) {
 		floorFace1Num = file->faceIndex[area1->firstFace + i];
@@ -411,7 +414,7 @@ bool idAASReach::Reachability_Step_Barrier_WaterJump_WalkOffLedge( int area1num,
 					// edges if they overlap in the direction orthogonal to
 					// the gravity direction
 					orthogonal = file->settings.invGravityDir.Cross( normal );
-					invGravityDot = file->settings.invGravityDir * file->settings.invGravityDir;
+					//invGravityDot = file->settings.invGravityDir * file->settings.invGravityDir;
 					orthogonalDot = orthogonal * orthogonal;
 					// projection into the step plane
 					// NOTE: since gravity is vertical this is just the z coordinate
@@ -521,8 +524,6 @@ bool idAASReach::Reachability_Step_Barrier_WaterJump_WalkOffLedge( int area1num,
 							floor_bestLength = length;
 							floor_foundReach = true;
 							floor_bestArea1FloorEdgeNum = edge1Num;
-							floor_bestArea2FloorEdgeNum = edge2Num;
-							floor_bestFace1 = floorFace1;
 							floor_bestStart = start;
 							floor_bestNormal = normal;
 							floor_bestEnd = end;
@@ -537,9 +538,6 @@ bool idAASReach::Reachability_Step_Barrier_WaterJump_WalkOffLedge( int area1num,
 							water_bestDist = dist;
 							water_bestLength = length;
 							water_foundReach = true;
-							water_bestArea1FloorEdgeNum = edge1Num;
-							water_bestArea2FloorEdgeNum = edge2Num;
-							water_bestFace1 = floorFace1;
 							water_bestStart = start;	// best start point in area1
 							water_bestNormal = normal;	// normal is pointing into area2
 							water_bestEnd = end;		// best point towards area2

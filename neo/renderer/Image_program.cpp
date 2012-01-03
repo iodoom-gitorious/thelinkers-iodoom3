@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -25,6 +25,11 @@ If you have questions concerning this license or the applicable additional terms
 
 ===========================================================================
 */
+
+#include "sys/platform.h"
+#include "renderer/tr_local.h"
+
+#include "renderer/Image.h"
 
 /*
 
@@ -47,17 +52,6 @@ Manager
 ->List
 ->Print
 ->Reload( bool force )
-
-*/
-
-#include "../idlib/precompiled.h"
-#pragma hdrstop
-
-// tr_imageprogram.c
-
-#include "tr_local.h"
-
-/*
 
 Anywhere that an image name is used (diffusemaps, bumpmaps, specularmaps, lights, etc),
 an imageProgram can be specified.
@@ -93,13 +87,13 @@ static void R_HeightmapToNormalMap( byte *data, int width, int height, float sca
 	for ( i = 0 ; i < height ; i++ ) {
 		for ( j = 0 ; j < width ; j++ ) {
 			int		d1, d2, d3, d4;
-			int		a1, a2, a3, a4;
+			int		a1, a3, a4;
 
 			// FIXME: look at five points?
 
 			// look at three points to estimate the gradient
 			a1 = d1 = depth[ ( i * width + j ) ];
-			a2 = d2 = depth[ ( i * width + ( ( j + 1 ) & ( width - 1 ) ) ) ];
+			d2 = depth[ ( i * width + ( ( j + 1 ) & ( width - 1 ) ) ) ];
 			a3 = d3 = depth[ ( ( ( i + 1 ) & ( height - 1 ) ) * width + j ) ];
 			a4 = d4 = depth[ ( ( ( i + 1 ) & ( height - 1 ) ) * width + ( ( j + 1 ) & ( width - 1 ) ) ) ];
 
@@ -118,7 +112,7 @@ static void R_HeightmapToNormalMap( byte *data, int width, int height, float sca
 			dir2[1] = a1 * scale;
 			dir2[2] = 1;
 			dir2.NormalizeFast();
-	
+
 			dir += dir2;
 			dir.NormalizeFast();
 
@@ -395,7 +389,7 @@ static bool R_ParseImageProgram_r( idLexer &src, byte **pic, int *width, int *he
 		src.ReadToken( &token );
 		AppendToken( token );
 		scale = token.GetFloatValue();
-		
+
 		// process it
 		if ( pic ) {
 			R_HeightmapToNormalMap( *pic, *width, *height, scale );
@@ -427,7 +421,7 @@ static bool R_ParseImageProgram_r( idLexer &src, byte **pic, int *width, int *he
 			}
 			return false;
 		}
-		
+
 		// process it
 		if ( pic ) {
 			R_AddNormalMaps( *pic, *width, *height, pic2, width2, height2 );
@@ -478,7 +472,7 @@ static bool R_ParseImageProgram_r( idLexer &src, byte **pic, int *width, int *he
 			}
 			return false;
 		}
-		
+
 		// process it
 		if ( pic ) {
 			R_ImageAdd( *pic, *width, *height, pic2, width2, height2 );
@@ -553,8 +547,8 @@ static bool R_ParseImageProgram_r( idLexer &src, byte **pic, int *width, int *he
 			int		c;
 			c = *width * *height * 4;
 			for ( i = 0 ; i < c ; i+=4 ) {
-				(*pic)[i+1] = 
-				(*pic)[i+2] = 
+				(*pic)[i+1] =
+				(*pic)[i+2] =
 				(*pic)[i+3] = (*pic)[i];
 			}
 		}
@@ -576,8 +570,8 @@ static bool R_ParseImageProgram_r( idLexer &src, byte **pic, int *width, int *he
 			c = *width * *height * 4;
 			for ( i = 0 ; i < c ; i+=4 ) {
 				(*pic)[i+3] = ( (*pic)[i+0] + (*pic)[i+1] + (*pic)[i+2] ) / 3;
-				(*pic)[i+0] = 
-				(*pic)[i+1] = 
+				(*pic)[i+0] =
+				(*pic)[i+1] =
 				(*pic)[i+2] = 255;
 			}
 		}
@@ -641,4 +635,3 @@ const char *R_ParsePastImageProgram( idLexer &src ) {
 	R_ParseImageProgram_r( src, NULL, NULL, NULL, NULL, NULL );
 	return parseBuffer;
 }
-

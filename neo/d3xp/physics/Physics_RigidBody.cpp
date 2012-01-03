@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,10 +26,14 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
+#include "idlib/math/Quat.h"
 
-#include "../Game_local.h"
+#include "gamesys/SysCvar.h"
+#include "Entity.h"
+#include "Player.h"
+
+#include "physics/Physics_RigidBody.h"
 
 CLASS_DECLARATION( idPhysics_Base, idPhysics_RigidBody )
 END_CLASS
@@ -973,7 +977,7 @@ bool idPhysics_RigidBody::Evaluate( int timeStepMSec, int endTimeMSec ) {
 	timer_total.Stop();
 
 	if ( rb_showTimings->integer == 1 ) {
-		gameLocal.Printf( "%12s: t %1.4f cd %1.4f\n",
+		gameLocal.Printf( "%12s: t %u cd %u\n",
 						self->name.c_str(),
 						timer_total.Milliseconds(), timer_collision.Milliseconds() );
 		lastTimerReset = 0;
@@ -981,7 +985,7 @@ bool idPhysics_RigidBody::Evaluate( int timeStepMSec, int endTimeMSec ) {
 	else if ( rb_showTimings->integer == 2 ) {
 		numRigidBodies++;
 		if ( endTimeMSec > lastTimerReset ) {
-			gameLocal.Printf( "rb %d: t %1.4f cd %1.4f\n",
+			gameLocal.Printf( "rb %d: t %u cd %u\n",
 							numRigidBodies,
 							timer_total.Milliseconds(), timer_collision.Milliseconds() );
 		}

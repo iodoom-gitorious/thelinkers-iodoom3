@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -29,6 +29,8 @@ If you have questions concerning this license or the applicable additional terms
 #ifndef __DRAWVERT_H__
 #define __DRAWVERT_H__
 
+#include "idlib/math/Vector.h"
+
 /*
 ===============================================================================
 
@@ -44,7 +46,7 @@ public:
 	idVec3			normal;
 	idVec3			tangents[2];
 	byte			color[4];
-#if 0 // was MACOS_X see comments concerning DRAWVERT_PADDED in Simd_Altivec.h 
+#if 0 // was MACOS_X see comments concerning DRAWVERT_PADDED in Simd_Altivec.h
 	float			padding;
 #endif
 	float			operator[]( const int index ) const;

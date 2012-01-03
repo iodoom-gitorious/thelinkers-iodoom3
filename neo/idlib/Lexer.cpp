@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,13 +26,17 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
+#include "idlib/Heap.h"
+#include "framework/Common.h"
+#include "framework/FileSystem.h"
+
+#include "idlib/Lexer.h"
 
 #define PUNCTABLE
 
 //longer punctuations first
-punctuation_t default_punctuations[] = {
+static const punctuation_t default_punctuations[] = {
 	//binary operators
 	{">>=",P_RSHIFT_ASSIGN},
 	{"<<=",P_LSHIFT_ASSIGN},
@@ -774,7 +778,7 @@ idLexer::ReadPunctuation
 */
 int idLexer::ReadPunctuation( idToken *token ) {
 	int l, n, i;
-	char *p;
+	const char *p;
 	const punctuation_t *punc;
 
 #ifdef PUNCTABLE
@@ -1385,7 +1389,7 @@ const char *idLexer::ParseBracedSectionExact( idStr &out, int tabs ) {
 	}
 
 	out = "{";
-	depth = 1;	
+	depth = 1;
 	skipWhite = false;
 	doTabs = tabs >= 0;
 
@@ -1416,7 +1420,7 @@ const char *idLexer::ParseBracedSectionExact( idStr &out, int tabs ) {
 			case '}': {
 				depth--;
 				tabs--;
-				break;				
+				break;
 			}
 		}
 
@@ -1598,7 +1602,7 @@ int idLexer::LoadFile( const char *filename, bool OSPath ) {
 		idLib::common->Error("idLexer::LoadFile: another script already loaded");
 		return false;
 	}
-	
+
 	if ( !OSPath && ( baseFolder[0] != '\0' ) ) {
 		pathname = va( "%s/%s", baseFolder, filename );
 	} else {
@@ -1794,4 +1798,3 @@ idLexer::HadError
 bool idLexer::HadError( void ) const {
 	return hadError;
 }
-

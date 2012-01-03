@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,10 +26,16 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
+#include "idlib/LangDict.h"
+#include "framework/async/AsyncNetwork.h"
+#include "framework/FileSystem.h"
+#include "framework/Console.h"
+#include "framework/Game.h"
+#include "sound/sound.h"
+#include "ui/UserInterface.h"
 
-#include "Session_local.h"
+#include "framework/Session_local.h"
 
 idCVar	idSessionLocal::gui_configServerRate( "gui_configServerRate", "0", CVAR_GUI | CVAR_ARCHIVE | CVAR_ROM | CVAR_INTEGER, "" );
 
@@ -87,8 +93,6 @@ idSessionLocal::SetGUI
 =================
 */
 void idSessionLocal::SetGUI( idUserInterface *gui, HandleGuiCommand_t handle ) {
-	const char	*cmd;
-
 	guiActive = gui;
 	guiHandle = handle;
 	if ( guiMsgRestore ) {
@@ -110,7 +114,7 @@ void idSessionLocal::SetGUI( idUserInterface *gui, HandleGuiCommand_t handle ) {
 	memset( &ev, 0, sizeof( ev ) );
 	ev.evType = SE_NONE;
 
-	cmd = guiActive->HandleEvent( &ev, com_frameTime );
+	guiActive->HandleEvent( &ev, com_frameTime );
 	guiActive->Activate( true, com_frameTime );
 }
 
@@ -156,7 +160,7 @@ void idSessionLocal::GetSaveGameList( idStrList &fileList, idList<fileTIME_T> &f
 	} else {
 		files = fileSystem->ListFiles( "savegames", ".save" );
 	}
-	
+
 	fileList = files->GetList();
 	fileSystem->FreeFileList( files );
 
@@ -292,7 +296,7 @@ idSessionLocal::SetMainMenuGuiVars
 void idSessionLocal::SetMainMenuGuiVars( void ) {
 
 	guiMainMenu->SetStateString( "serverlist_sel_0", "-1" );
-	guiMainMenu->SetStateString( "serverlist_selid_0", "-1" ); 
+	guiMainMenu->SetStateString( "serverlist_selid_0", "-1" );
 
 	guiMainMenu->SetStateInt( "com_machineSpec", com_machineSpec.GetInteger() );
 
@@ -323,11 +327,7 @@ void idSessionLocal::SetMainMenuGuiVars( void ) {
 
 	guiMsg->SetStateString( "visible_hasxp", fileSystem->HasD3XP() ? "1" : "0" );
 
-#if defined( __linux__ )
-	guiMainMenu->SetStateString( "driver_prompt", "1" );
-#else
 	guiMainMenu->SetStateString( "driver_prompt", "0" );
-#endif
 
 	SetPbMenuGuiVars();
 }
@@ -367,7 +367,7 @@ bool idSessionLocal::HandleSaveGameMenuCommand( idCmdArgs &args, int &icmd ) {
 				} else {
 					file = fileSystem->OpenFileRead( saveFileName );
 				}
-				
+
 				if ( file != NULL ) {
 					fileSystem->CloseFile( file );
 
@@ -579,7 +579,7 @@ void idSessionLocal::HandleMainMenuCommands( const char *menuCommand ) {
 		if ( game ) {
 			game->HandleMainMenuCommands( cmd, guiActive );
 		}
-		
+
 		if ( !idStr::Icmp( cmd, "startGame" ) ) {
 			cvarSystem->SetCVarInteger( "g_skill", guiMainMenu->State().GetInt( "skill" ) );
 			if ( icmd < args.Argc() ) {
@@ -591,7 +591,7 @@ void idSessionLocal::HandleMainMenuCommands( const char *menuCommand ) {
 				StartNewGame( "game/demo_mars_city1" );
 #endif
 			}
-			// need to do this here to make sure com_frameTime is correct or the gui activates with a time that 
+			// need to do this here to make sure com_frameTime is correct or the gui activates with a time that
 			// is "however long map load took" time in the past
 			common->GUIFrame( false, false );
 			SetGUI( guiIntro, NULL );
@@ -675,7 +675,7 @@ void idSessionLocal::HandleMainMenuCommands( const char *menuCommand ) {
 		}
 
 		if ( !idStr::Icmp( cmd, "LANConnect" ) ) {
-			int sel = guiActive->State().GetInt( "serverList_selid_0" ); 
+			int sel = guiActive->State().GetInt( "serverList_selid_0" );
 			cmdSystem->BufferCommandText( CMD_EXEC_NOW, va( "Connect %d\n", sel ) );
 			return;
 		}
@@ -890,10 +890,6 @@ void idSessionLocal::HandleMainMenuCommands( const char *menuCommand ) {
 				if ( cvarSystem->GetCVarBool( "s_useEAXReverb" ) ) {
 					int eax = soundSystem->IsEAXAvailable();
 					switch ( eax ) {
-					case 2:
-						// OpenAL subsystem load failed
-						MessageBox( MSG_OK, common->GetLanguageDict()->GetString( "#str_07238" ), common->GetLanguageDict()->GetString( "#str_07231" ), true );
-						break;
 					case 1:
 						// when you restart
 						MessageBox( MSG_OK, common->GetLanguageDict()->GetString( "#str_04137" ), common->GetLanguageDict()->GetString( "#str_07231" ), true );
@@ -910,14 +906,12 @@ void idSessionLocal::HandleMainMenuCommands( const char *menuCommand ) {
 						break;
 					}
 				} else {
-					// also turn off OpenAL so we fully go back to legacy mixer
-					cvarSystem->SetCVarBool( "s_useOpenAL", false );
 					// when you restart
 					MessageBox( MSG_OK, common->GetLanguageDict()->GetString( "#str_04137" ), common->GetLanguageDict()->GetString( "#str_07231" ), true );
 				}
 			}
 			if ( !vcmd.Icmp( "drivar" ) ) {
-				cmdSystem->BufferCommandText( CMD_EXEC_NOW, "s_restart\n" );				
+				cmdSystem->BufferCommandText( CMD_EXEC_NOW, "s_restart\n" );
 			}
 			continue;
 		}
@@ -1003,7 +997,7 @@ void idSessionLocal::HandleMainMenuCommands( const char *menuCommand ) {
 			guiMainMenu->SetKeyBindingNames();
 			continue;
 		}
-		
+
 		if ( !idStr::Icmp( cmd, "systemCvars" ) ) {
 			guiActive->HandleNamedEvent( "cvar read render" );
 			guiActive->HandleNamedEvent( "cvar read sound" );
@@ -1032,7 +1026,7 @@ void idSessionLocal::HandleMainMenuCommands( const char *menuCommand ) {
 			if ( !session->CDKeysAreValid( false ) ) {
 				cmdSystem->BufferCommandText( CMD_EXEC_NOW, "promptKey force" );
 				cmdSystem->ExecuteCommandBuffer();
-			}			
+			}
 #endif
 			continue;
 		}
@@ -1106,8 +1100,7 @@ void idSessionLocal::HandleInGameCommands( const char *menuCommand ) {
 		if ( guiActive ) {
 			sysEvent_t  ev;
 			ev.evType = SE_NONE;
-			const char	*cmd;
-			cmd = guiActive->HandleEvent( &ev, com_frameTime );
+			guiActive->HandleEvent( &ev, com_frameTime );
 			guiActive->Activate( false, com_frameTime );
 			guiActive = NULL;
 		}
@@ -1252,9 +1245,9 @@ idSessionLocal::MessageBox
 =================
 */
 const char* idSessionLocal::MessageBox( msgBoxType_t type, const char *message, const char *title, bool wait, const char *fire_yes, const char *fire_no, bool network ) {
-	
+
 	common->DPrintf( "MessageBox: %s - %s\n", title ? title : "", message ? message : "" );
-	
+
 	if ( !BoxDialogSanityCheck() ) {
 		return NULL;
 	}
@@ -1310,7 +1303,7 @@ const char* idSessionLocal::MessageBox( msgBoxType_t type, const char *message, 
 			guiMsg->SetStateString( "visible_mid", "0" );
 			guiMsg->SetStateString( "visible_left", "1" );
 			guiMsg->SetStateString( "visible_right", "1" );
-			guiMsg->SetStateString( "visible_entry", "1" );			
+			guiMsg->SetStateString( "visible_entry", "1" );
 			guiMsg->HandleNamedEvent( "Prompt" );
 			break;
 		case MSG_CDKEY:
@@ -1352,7 +1345,7 @@ const char* idSessionLocal::MessageBox( msgBoxType_t type, const char *message, 
 	guiActive->Activate( true, com_frameTime );
 	msgRunning = true;
 	msgRetIndex = -1;
-	
+
 	if ( wait ) {
 		// play one frame ignoring events so we don't get confused by parasite button releases
 		msgIgnoreButtons = true;
@@ -1379,7 +1372,7 @@ const char* idSessionLocal::MessageBox( msgBoxType_t type, const char *message, 
 						 guiMsg->State().GetString( "visible_cdchk" ),
 						 guiMsg->State().GetString( "str_cdkey" ),
 						 guiMsg->State().GetString( "str_cdchk" ),
-						 guiMsg->State().GetString( "visible_xpchk" ),						 
+						 guiMsg->State().GetString( "visible_xpchk" ),
 						 guiMsg->State().GetString( "str_xpkey" ),
 						 guiMsg->State().GetString( "str_xpchk" ) );
 				return msgFireBack[ 0 ].c_str();
@@ -1614,7 +1607,7 @@ void idSessionLocal::HandleNoteCommands( const char *menuCommand ) {
 			}
 
 			sprintf( str, "recordViewNotes \"%s\" \"%s\" \"%s\"\n", workName.c_str(), noteNum.c_str(), guiTakeNotes->State().GetString( "note" ) );
-			
+
 			cmdSystem->BufferCommandText( CMD_EXEC_NOW, str );
 			cmdSystem->ExecuteCommandBuffer();
 

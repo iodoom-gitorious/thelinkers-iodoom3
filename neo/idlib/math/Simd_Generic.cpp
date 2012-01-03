@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,11 +26,15 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
+#include "idlib/geometry/DrawVert.h"
+#include "idlib/geometry/JointTransform.h"
+#include "idlib/math/Vector.h"
+#include "idlib/math/Plane.h"
+#include "idlib/math/Matrix.h"
+#include "renderer/Model.h"
 
-#include "Simd_Generic.h"
-
+#include "idlib/math/Simd_Generic.h"
 
 //===============================================================
 //
@@ -45,7 +49,7 @@ If you have questions concerning this license or the applicable additional terms
 
 #ifdef _DEBUG
 #define NODEFAULT	default: assert( 0 )
-#elif _WIN32
+#elif _MSC_VER
 #define NODEFAULT	default: __assume( 0 )
 #else
 #define NODEFAULT
@@ -2206,8 +2210,8 @@ bool VPCALL idSIMD_Generic::MatX_LDLTFactor( idMatX &mat, idVecX &invDiag, const
 		sum = ptr[i];
 		for ( j = 0; j < i; j++ ) {
 			d = ptr[j];
-		    v[j] = diagPtr[0] * d;
-		    sum -= v[j] * d;
+			v[j] = diagPtr[0] * d;
+			sum -= v[j] * d;
 			diagPtr += nc + 1;
 		}
 
@@ -2499,7 +2503,7 @@ void VPCALL idSIMD_Generic::DeriveTangents( idPlane *planes, idDrawVert *verts, 
 	idPlane *planesPtr = planes;
 	for ( i = 0; i < numIndexes; i += 3 ) {
 		idDrawVert *a, *b, *c;
-		unsigned long signBit;
+		unsigned int signBit;
 		float d0[5], d1[5], f, area;
 		idVec3 n, t0, t1;
 
@@ -2540,7 +2544,7 @@ void VPCALL idSIMD_Generic::DeriveTangents( idPlane *planes, idDrawVert *verts, 
 
 		// area sign bit
 		area = d0[3] * d1[4] - d0[4] * d1[3];
-		signBit = ( *(unsigned long *)&area ) & ( 1 << 31 );
+		signBit = ( *(unsigned int *)&area ) & ( 1 << 31 );
 
 		// first tangent
 		t0[0] = d0[0] * d1[4] - d0[4] * d1[0];
@@ -2548,7 +2552,7 @@ void VPCALL idSIMD_Generic::DeriveTangents( idPlane *planes, idDrawVert *verts, 
 		t0[2] = d0[2] * d1[4] - d0[4] * d1[2];
 
 		f = idMath::RSqrt( t0.x * t0.x + t0.y * t0.y + t0.z * t0.z );
-		*(unsigned long *)&f ^= signBit;
+		*(unsigned int *)&f ^= signBit;
 
 		t0.x *= f;
 		t0.y *= f;
@@ -2560,7 +2564,7 @@ void VPCALL idSIMD_Generic::DeriveTangents( idPlane *planes, idDrawVert *verts, 
 		t1[2] = d0[3] * d1[2] - d0[2] * d1[3];
 
 		f = idMath::RSqrt( t1.x * t1.x + t1.y * t1.y + t1.z * t1.z );
-		*(unsigned long *)&f ^= signBit;
+		*(unsigned int *)&f ^= signBit;
 
 		t1.x *= f;
 		t1.y *= f;
@@ -2616,8 +2620,11 @@ void VPCALL idSIMD_Generic::DeriveUnsmoothedTangents( idDrawVert *verts, const d
 
 	for ( i = 0; i < numVerts; i++ ) {
 		idDrawVert *a, *b, *c;
-		float d0, d1, d2, d3, d4;
-		float d5, d6, d7, d8, d9;
+#ifndef DERIVE_UNSMOOTHED_BITANGENT
+		float d3, d8;
+#endif
+		float d0, d1, d2, d4;
+		float d5, d6, d7, d9;
 		float s0, s1, s2;
 		float n0, n1, n2;
 		float t0, t1, t2;
@@ -2632,13 +2639,17 @@ void VPCALL idSIMD_Generic::DeriveUnsmoothedTangents( idDrawVert *verts, const d
 		d0 = b->xyz[0] - a->xyz[0];
 		d1 = b->xyz[1] - a->xyz[1];
 		d2 = b->xyz[2] - a->xyz[2];
+#ifndef DERIVE_UNSMOOTHED_BITANGENT
 		d3 = b->st[0] - a->st[0];
+#endif
 		d4 = b->st[1] - a->st[1];
 
 		d5 = c->xyz[0] - a->xyz[0];
 		d6 = c->xyz[1] - a->xyz[1];
 		d7 = c->xyz[2] - a->xyz[2];
+#ifndef DERIVE_UNSMOOTHED_BITANGENT
 		d8 = c->st[0] - a->st[0];
+#endif
 		d9 = c->st[1] - a->st[1];
 
 		s0 = dt.normalizationScale[0];

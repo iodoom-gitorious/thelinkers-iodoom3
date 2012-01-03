@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -54,14 +54,14 @@ void DialogName::DoDataExchange(CDataExchange* pDX)
 	//}}AFX_DATA_MAP
 }
 
-BOOL DialogName::OnInitDialog() 
+BOOL DialogName::OnInitDialog()
 {
 	CDialog::OnInitDialog();
 
 	SetWindowText(m_strCaption);
-	
+
 	return TRUE;  // return TRUE unless you set the focus to a control
-	              // EXCEPTION: OCX Property Pages should return FALSE
+				  // EXCEPTION: OCX Property Pages should return FALSE
 }
 
 BEGIN_MESSAGE_MAP(DialogName, CDialog)
@@ -72,7 +72,7 @@ END_MESSAGE_MAP()
 /////////////////////////////////////////////////////////////////////////////
 // DialogName message handlers
 
-void DialogName::OnOK() 
+void DialogName::OnOK()
 {
 	CDialog::OnOK();
 }

@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -28,6 +28,9 @@ If you have questions concerning this license or the applicable additional terms
 
 #ifndef __MODEL_H__
 #define __MODEL_H__
+
+#include "idlib/bv/Bounds.h"
+#include "renderer/Material.h"
 
 /*
 ===============================================================================
@@ -199,7 +202,7 @@ public:
 	// which can regenerate the data with LoadModel()
 	virtual void				PurgeModel() = 0;
 
-	// resets any model information that needs to be reset on a same level load etc.. 
+	// resets any model information that needs to be reset on a same level load etc..
 	// currently only implemented for liquids
 	virtual void				Reset() = 0;
 
@@ -208,7 +211,7 @@ public:
 	virtual void				LoadModel() = 0;
 
 	// internal use
-	virtual bool				IsLoaded() = 0;
+	virtual bool				IsLoaded() const = 0;
 	virtual void				SetLevelLoadReferenced( bool referenced ) = 0;
 	virtual bool				IsLevelLoadReferenced() = 0;
 

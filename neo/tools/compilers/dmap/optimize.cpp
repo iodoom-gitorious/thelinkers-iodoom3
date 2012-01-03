@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,16 +26,16 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#include "../../../idlib/precompiled.h"
-#pragma hdrstop
+#include "sys/platform.h"
 
 //#pragma optimize( "", off )
 
-#include "dmap.h"
 #ifdef WIN32
 #include <windows.h>
 #include <GL/gl.h>
 #endif
+
+#include "tools/compilers/dmap/dmap.h"
 
 /*
 
@@ -181,12 +181,6 @@ static	void LinkEdge( optEdge_t *e ) {
 	e->v2->edges = e;
 }
 
-#ifdef __linux__
-
-optVertex_t *FindOptVertex( idDrawVert *v, optimizeGroup_t *opt );
-
-#else
-
 /*
 ================
 FindOptVertex
@@ -212,7 +206,7 @@ static optVertex_t *FindOptVertex( idDrawVert *v, optimizeGroup_t *opt ) {
 		common->Error( "MAX_OPT_VERTEXES" );
 		return NULL;
 	}
-	
+
 	numOptVerts++;
 
 	vert = &optVerts[i];
@@ -226,8 +220,6 @@ static optVertex_t *FindOptVertex( idDrawVert *v, optimizeGroup_t *opt ) {
 
 	return vert;
 }
-
-#endif
 
 /*
 ================
@@ -345,7 +337,7 @@ This should only be called if PointsStraddleLine returned true
 Will return NULL if the lines are colinear
 ====================
 */
-static	optVertex_t *EdgeIntersection( const optVertex_t *p1, const optVertex_t *p2, 
+static	optVertex_t *EdgeIntersection( const optVertex_t *p1, const optVertex_t *p2,
 									  const optVertex_t *l1, const optVertex_t *l2, optimizeGroup_t *opt ) {
 	float	f;
 	idDrawVert	*v;
@@ -608,7 +600,7 @@ static	void RemoveIfColinear( optVertex_t *ov, optIsland_t *island ) {
 	optEdge_t	*e, *e1, *e2;
 	optVertex_t *v1, *v2, *v3;
 	idVec3		dir1, dir2;
-	float		len, dist;
+	float		dist;
 	idVec3		point;
 	idVec3		offset;
 	float		off;
@@ -632,6 +624,7 @@ static	void RemoveIfColinear( optVertex_t *ov, optIsland_t *island ) {
 			e = e->v2link;
 		} else {
 			common->Error( "RemoveIfColinear: mislinked edge" );
+			return;
 		}
 	}
 
@@ -653,6 +646,7 @@ static	void RemoveIfColinear( optVertex_t *ov, optIsland_t *island ) {
 		v1 = e1->v1;
 	} else {
 		common->Error( "RemoveIfColinear: mislinked edge" );
+		return;
 	}
 	if ( e2->v1 == v2 ) {
 		v3 = e2->v2;
@@ -660,10 +654,12 @@ static	void RemoveIfColinear( optVertex_t *ov, optIsland_t *island ) {
 		v3 = e2->v1;
 	} else {
 		common->Error( "RemoveIfColinear: mislinked edge" );
+		return;
 	}
 
 	if ( v1 == v3 ) {
 		common->Error( "RemoveIfColinear: mislinked edge" );
+		return;
 	}
 
 	// they must point in opposite directions
@@ -674,7 +670,7 @@ static	void RemoveIfColinear( optVertex_t *ov, optIsland_t *island ) {
 
 	// see if they are colinear
 	VectorSubtract( v3->v.xyz, v1->v.xyz, dir1 );
-	len = dir1.Normalize();
+	dir1.Normalize();
 	VectorSubtract( v2->v.xyz, v1->v.xyz, dir2 );
 	dist = DotProduct( dir2, dir1 );
 	VectorMA( v1->v.xyz, dist, dir1, point );
@@ -707,6 +703,7 @@ static	void RemoveIfColinear( optVertex_t *ov, optIsland_t *island ) {
 	// v2 should have no edges now
 	if ( v2->edges ) {
 		common->Error( "RemoveIfColinear: didn't remove properly" );
+		return;
 	}
 
 
@@ -715,7 +712,7 @@ static	void RemoveIfColinear( optVertex_t *ov, optIsland_t *island ) {
 	// sliver triangle out of existance, and all the edges
 	// can be removed
 	for ( e = island->edges ; e ; e = e->islandLink ) {
-		if ( ( e->v1 == v1 && e->v2 == v3 ) 
+		if ( ( e->v1 == v1 && e->v2 == v3 )
 		|| ( e->v1 == v3 && e->v2 == v1 ) ) {
 			UnlinkEdge( e, island );
 			RemoveIfColinear( v1, island );
@@ -942,6 +939,7 @@ static void CreateOptTri( optVertex_t *first, optEdge_t *e1, optEdge_t *e2, optI
 		second = e1->v1;
 	} else {
 		common->Error( "CreateOptTri: mislinked edge" );
+		return;
 	}
 
 	if ( e2->v1 == first ) {
@@ -950,10 +948,12 @@ static void CreateOptTri( optVertex_t *first, optEdge_t *e1, optEdge_t *e2, optI
 		third = e2->v1;
 	} else {
 		common->Error( "CreateOptTri: mislinked edge" );
+		return;
 	}
 
 	if ( !IsTriangleValid( first, second, third ) ) {
 		common->Error( "CreateOptTri: invalid" );
+		return;
 	}
 
 //DrawEdges( island );
@@ -984,6 +984,7 @@ static void CreateOptTri( optVertex_t *first, optEdge_t *e1, optEdge_t *e2, optI
 			opposite = opposite->v2link;
 		} else {
 			common->Error( "BuildOptTriangles: mislinked edge" );
+			return;
 		}
 	}
 
@@ -1058,6 +1059,7 @@ static void CreateOptTri( optVertex_t *first, optEdge_t *e1, optEdge_t *e2, optI
 }
 
 // debugging tool
+#if 0
 static void ReportNearbyVertexes( const optVertex_t *v, const optIsland_t *island ) {
 	const optVertex_t	*ov;
 	float		d;
@@ -1077,6 +1079,7 @@ static void ReportNearbyVertexes( const optVertex_t *v, const optIsland_t *islan
 		}
 	}
 }
+#endif
 
 /*
 ====================
@@ -1086,8 +1089,8 @@ Generate a new list of triangles from the optEdeges
 ====================
 */
 static void BuildOptTriangles( optIsland_t *island ) {
-	optVertex_t		*ov, *second, *third, *middle;
-	optEdge_t		*e1, *e1Next, *e2, *e2Next, *check, *checkNext;
+	optVertex_t		*ov, *second = NULL, *third = NULL, *middle = NULL;
+	optEdge_t		*e1, *e1Next = NULL, *e2, *e2Next = NULL, *check, *checkNext = NULL;
 
 	// free them
 	FreeOptTriangles( island );
@@ -1183,7 +1186,7 @@ for ( e1 = ov->edges ; e1 ; e1 = e1Next ) {
 						continue;
 					}
 
-					if ( IsTriangleValid( ov, second, middle ) 
+					if ( IsTriangleValid( ov, second, middle )
 						&& IsTriangleValid( ov, middle, third ) ) {
 						break;	// should use the subdivided ones
 					}
@@ -1516,7 +1519,7 @@ void SplitOriginalEdgesAtCrossings( optimizeGroup_t *opt ) {
 			newVert = EdgeIntersection( v1, v2, v3, v4, opt );
 
 			if ( !newVert ) {
-//common->Printf( "lines %i (%i to %i) and %i (%i to %i) are colinear\n", i, v1 - optVerts, v2 - optVerts, 
+//common->Printf( "lines %i (%i to %i) and %i (%i to %i) are colinear\n", i, v1 - optVerts, v2 - optVerts,
 //		   j, v3 - optVerts, v4 - optVerts );	// !@#
 				// colinear, so add both verts of each edge to opposite
 				if ( VertexBetween( v3, v1, v2 ) ) {
@@ -1551,10 +1554,10 @@ void SplitOriginalEdgesAtCrossings( optimizeGroup_t *opt ) {
 			}
 #if 0
 if ( newVert && newVert != v1 && newVert != v2 && newVert != v3 && newVert != v4 ) {
-common->Printf( "lines %i (%i to %i) and %i (%i to %i) cross at new point %i\n", i, v1 - optVerts, v2 - optVerts, 
+common->Printf( "lines %i (%i to %i) and %i (%i to %i) cross at new point %i\n", i, v1 - optVerts, v2 - optVerts,
 		   j, v3 - optVerts, v4 - optVerts, newVert - optVerts );
 } else if ( newVert ) {
-common->Printf( "lines %i (%i to %i) and %i (%i to %i) intersect at old point %i\n", i, v1 - optVerts, v2 - optVerts, 
+common->Printf( "lines %i (%i to %i) and %i (%i to %i) intersect at old point %i\n", i, v1 - optVerts, v2 - optVerts,
 		  j, v3 - optVerts, v4 - optVerts, newVert - optVerts );
 }
 #endif
@@ -1631,7 +1634,7 @@ common->Printf( "lines %i (%i to %i) and %i (%i to %i) intersect at old point %i
 	// check for duplicated edges
 	for ( i = 0 ; i < numOptEdges ; i++ ) {
 		for ( j = i+1 ; j < numOptEdges ; j++ ) {
-			if ( ( optEdges[i].v1 == optEdges[j].v1 && optEdges[i].v2 == optEdges[j].v2 ) 
+			if ( ( optEdges[i].v1 == optEdges[j].v1 && optEdges[i].v2 == optEdges[j].v2 )
 				|| ( optEdges[i].v1 == optEdges[j].v2 && optEdges[i].v2 == optEdges[j].v1 ) ) {
 				common->Printf( "duplicated optEdge\n" );
 			}
@@ -1749,6 +1752,7 @@ static void OptimizeIsland( optIsland_t *island ) {
 AddVertexToIsland_r
 ================
 */
+#if 0
 static void AddVertexToIsland_r( optVertex_t *vert, optIsland_t *island ) {
 	optEdge_t	*e;
 
@@ -1783,6 +1787,7 @@ static void AddVertexToIsland_r( optVertex_t *vert, optIsland_t *island ) {
 	}
 
 }
+#endif
 
 /*
 ====================
@@ -1798,6 +1803,7 @@ doing this, because PointInSourceTris() can give a bad answer if
 the source list has triangles not used in the optimization
 ====================
 */
+#if 0
 static void SeparateIslands( optimizeGroup_t *opt ) {
 	int		i;
 	optIsland_t	island;
@@ -1820,6 +1826,7 @@ static void SeparateIslands( optimizeGroup_t *opt ) {
 		common->Printf( "%6i islands\n", numIslands );
 	}
 }
+#endif
 
 static void DontSeparateIslands( optimizeGroup_t *opt ) {
 	int		i;
@@ -1852,6 +1859,7 @@ PointInSourceTris
 This is a sloppy bounding box check
 ====================
 */
+#if 0
 static bool PointInSourceTris( float x, float y, float z, optimizeGroup_t *opt ) {
 	mapTri_t	*tri;
 	idBounds	b;
@@ -1876,6 +1884,7 @@ static bool PointInSourceTris( float x, float y, float z, optimizeGroup_t *opt )
 	}
 	return false;
 }
+#endif
 
 /*
 ====================

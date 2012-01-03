@@ -2,9 +2,9 @@
 ===========================================================================
 
 Doom 3 GPL Source Code
-Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Doom 3 GPL Source Code (?Doom 3 Source Code?).  
+This file is part of the Doom 3 GPL Source Code ("Doom 3 Source Code").
 
 Doom 3 Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -29,132 +29,16 @@ If you have questions concerning this license or the applicable additional terms
 #ifndef __SYS_PUBLIC__
 #define __SYS_PUBLIC__
 
-/*
-===============================================================================
-
-	Non-portable system services.
-
-===============================================================================
-*/
-
-
-// Win32
-#if defined(WIN32) || defined(_WIN32)
-
-#define	BUILD_STRING					"win-x86"
-#define BUILD_OS_ID						0
-#define	CPUSTRING						"x86"
-#define CPU_EASYARGS					1
-
-#define ALIGN16( x )					__declspec(align(16)) x
-#define PACKED
-
-#define _alloca16( x )					((void *)((((int)_alloca( (x)+15 )) + 15) & ~15))
-
-#define PATHSEPERATOR_STR				"\\"
-#define PATHSEPERATOR_CHAR				'\\'
-
-#define ID_INLINE						__forceinline
-#define ID_STATIC_TEMPLATE				static
-
-#define assertmem( x, y )				assert( _CrtIsValidPointer( x, y, true ) )
-
-#endif
-
-// Mac OSX
-#if defined(MACOS_X) || defined(__APPLE__)
-
-#define BUILD_STRING				"MacOSX-universal"
-#define BUILD_OS_ID					1
-#ifdef __ppc__
-	#define	CPUSTRING					"ppc"
-	#define CPU_EASYARGS				0
-#elif defined(__i386__)
-	#define	CPUSTRING					"x86"
-	#define CPU_EASYARGS				1
-#endif
-
-#define ALIGN16( x )					x __attribute__ ((aligned (16)))
-
-#ifdef __MWERKS__
-#define PACKED
-#include <alloca.h>
-#else
-#define PACKED							__attribute__((packed))
-#endif
-
-#define _alloca							alloca
-#define _alloca16( x )					((void *)((((int)alloca( (x)+15 )) + 15) & ~15))
-
-#define PATHSEPERATOR_STR				"/"
-#define PATHSEPERATOR_CHAR				'/'
-
-#define __cdecl
-#define ASSERT							assert
-
-#define ID_INLINE						inline
-#define ID_STATIC_TEMPLATE
-
-#define assertmem( x, y )
-
-#endif
-
-
-// Linux
-#ifdef __linux__
-
-#ifdef __i386__
-	#define	BUILD_STRING				"linux-x86"
-	#define BUILD_OS_ID					2
-	#define CPUSTRING					"x86"
-	#define CPU_EASYARGS				1
-#elif defined(__ppc__)
-	#define	BUILD_STRING				"linux-ppc"
-	#define CPUSTRING					"ppc"
-	#define CPU_EASYARGS				0
-#endif
-
-#define _alloca							alloca
-#define _alloca16( x )					((void *)((((int)alloca( (x)+15 )) + 15) & ~15))
-
-#define ALIGN16( x )					x
-#define PACKED							__attribute__((packed))
-
-#define PATHSEPERATOR_STR				"/"
-#define PATHSEPERATOR_CHAR				'/'
-
-#define __cdecl
-#define ASSERT							assert
-
-#define ID_INLINE						inline
-#define ID_STATIC_TEMPLATE
-
-#define assertmem( x, y )
-
-#endif
-
-#ifdef __GNUC__
-#define id_attribute(x) __attribute__(x)
-#else
-#define id_attribute(x)  
-#endif
-
 typedef enum {
 	CPUID_NONE							= 0x00000,
 	CPUID_UNSUPPORTED					= 0x00001,	// unsupported (386/486)
 	CPUID_GENERIC						= 0x00002,	// unrecognized processor
-	CPUID_INTEL							= 0x00004,	// Intel
-	CPUID_AMD							= 0x00008,	// AMD
 	CPUID_MMX							= 0x00010,	// Multi Media Extensions
 	CPUID_3DNOW							= 0x00020,	// 3DNow!
 	CPUID_SSE							= 0x00040,	// Streaming SIMD Extensions
 	CPUID_SSE2							= 0x00080,	// Streaming SIMD Extensions 2
 	CPUID_SSE3							= 0x00100,	// Streaming SIMD Extentions 3 aka Prescott's New Instructions
 	CPUID_ALTIVEC						= 0x00200,	// AltiVec
-	CPUID_HTT							= 0x01000,	// Hyper-Threading Technology
-	CPUID_CMOV							= 0x02000,	// Conditional Move (CMOV) and fast floating point comparison (FCOMI) instructions
-	CPUID_FTZ							= 0x04000,	// Flush-To-Zero mode (denormal results are flushed to zero)
-	CPUID_DAZ							= 0x08000	// Denormals-Are-Zero mode (denormal source operands are set to zero)
 } cpuid_t;
 
 typedef enum {
@@ -212,15 +96,15 @@ typedef enum {
 	M_DELTAZ
 } sys_mEvents;
 
-typedef struct sysEvent_s {
+struct sysEvent_t {
 	sysEventType_t	evType;
 	int				evValue;
 	int				evValue2;
 	int				evPtrLength;		// bytes of data pointed to by evPtr, for journaling
 	void *			evPtr;				// this must be manually freed if not NULL
-} sysEvent_t;
+};
 
-typedef struct sysMemoryStats_s {
+struct sysMemoryStats_t {
 	int memoryLoad;
 	int totalPhysical;
 	int availPhysical;
@@ -229,9 +113,7 @@ typedef struct sysMemoryStats_s {
 	int totalVirtual;
 	int availVirtual;
 	int availExtendedVirtual;
-} sysMemoryStats_t;
-
-typedef unsigned long address_t;
+};
 
 template<class type> class idList;		// for Sys_ListFiles
 
@@ -255,30 +137,19 @@ void			Sys_Printf( const char *msg, ... )id_attribute((format(printf,1,2)));
 void			Sys_DebugPrintf( const char *fmt, ... )id_attribute((format(printf,1,2)));
 void			Sys_DebugVPrintf( const char *fmt, va_list arg );
 
-// a decent minimum sleep time to avoid going below the process scheduler speeds
-#define			SYS_MINSLEEP	20
-
 // allow game to yield CPU time
-// NOTE: due to SYS_MINSLEEP this is very bad portability karma, and should be completely removed
+// NOTE: due to SDL_TIMESLICE this is very bad portability karma, and should be completely removed
 void			Sys_Sleep( int msec );
 
 // Sys_Milliseconds should only be used for profiling purposes,
 // any game related timing information should come from event timestamps
-int				Sys_Milliseconds( void );
-
-// for accurate performance testing
-double			Sys_GetClockTicks( void );
-double			Sys_ClockTicksPerSecond( void );
+unsigned int	Sys_Milliseconds( void );
 
 // returns a selection of the CPUID_* flags
-cpuid_t			Sys_GetProcessorId( void );
-const char *	Sys_GetProcessorString( void );
+int				Sys_GetProcessorId( void );
 
 // returns true if the FPU stack is empty
 bool			Sys_FPU_StackIsEmpty( void );
-
-// empties the FPU stack
-void			Sys_FPU_ClearStack( void );
 
 // returns the FPU state as a string
 const char *	Sys_FPU_GetState( void );
@@ -292,10 +163,10 @@ void			Sys_FPU_SetPrecision( int precision );
 // sets the FPU rounding mode
 void			Sys_FPU_SetRounding( int rounding );
 
-// sets Flush-To-Zero mode (only available when CPUID_FTZ is set)
+// sets Flush-To-Zero mode
 void			Sys_FPU_SetFTZ( bool enable );
 
-// sets Denormals-Are-Zero mode (only available when CPUID_DAZ is set)
+// sets Denormals-Are-Zero mode
 void			Sys_FPU_SetDAZ( bool enable );
 
 // returns amount of system ram
@@ -318,24 +189,17 @@ bool			Sys_UnlockMemory( void *ptr, int bytes );
 // set amount of physical work memory
 void			Sys_SetPhysicalWorkMemory( int minBytes, int maxBytes );
 
-// allows retrieving the call stack at execution points
-void			Sys_GetCallStack( address_t *callStack, const int callStackSize );
-const char *	Sys_GetCallStackStr( const address_t *callStack, const int callStackSize );
-const char *	Sys_GetCallStackCurStr( int depth );
-const char *	Sys_GetCallStackCurAddressStr( int depth );
-void			Sys_ShutdownSymbols( void );
-
 // DLL loading, the path should be a fully qualified OS path to the DLL file to be loaded
-int				Sys_DLL_Load( const char *dllName );
-void *			Sys_DLL_GetProcAddress( int dllHandle, const char *procName );
-void			Sys_DLL_Unload( int dllHandle );
+uintptr_t		Sys_DLL_Load( const char *dllName );
+void *			Sys_DLL_GetProcAddress( uintptr_t dllHandle, const char *procName );
+void			Sys_DLL_Unload( uintptr_t dllHandle );
 
 // event generation
 void			Sys_GenerateEvents( void );
 sysEvent_t		Sys_GetEvent( void );
 void			Sys_ClearEvents( void );
 
-// input is tied to windows, so it needs to be started up and shut down whenever 
+// input is tied to windows, so it needs to be started up and shut down whenever
 // the main window is recreated
 void			Sys_InitInput( void );
 void			Sys_ShutdownInput( void );
@@ -477,38 +341,34 @@ void			Sys_ShutdownNetworking( void );
 ==============================================================
 */
 
-typedef unsigned int (*xthread_t)( void * );
+struct SDL_Thread;
 
-typedef enum {
-	THREAD_NORMAL,
-	THREAD_ABOVE_NORMAL,
-	THREAD_HIGHEST
-} xthreadPriority;
+typedef int (*xthread_t)( void * );
 
 typedef struct {
-	const char *	name;
-	int				threadHandle;
-	unsigned long	threadId;
+	const char		*name;
+	SDL_Thread		*threadHandle;
+	unsigned int	threadId;
 } xthreadInfo;
 
-const int MAX_THREADS				= 10;
-extern xthreadInfo *g_threads[MAX_THREADS];
-extern int			g_thread_count;
-
-void				Sys_CreateThread( xthread_t function, void *parms, xthreadPriority priority, xthreadInfo &info, const char *name, xthreadInfo *threads[MAX_THREADS], int *thread_count );
+void				Sys_CreateThread( xthread_t function, void *parms, xthreadInfo &info, const char *name );
 void				Sys_DestroyThread( xthreadInfo& info ); // sets threadHandle back to 0
 
 // find the name of the calling thread
-// if index != NULL, set the index in g_threads array (use -1 for "main" thread)
+// if index != NULL, set the index in threads array (use -1 for "main" thread)
 const char *		Sys_GetThreadName( int *index = 0 );
- 
-const int MAX_CRITICAL_SECTIONS		= 4;
+
+extern void Sys_InitThreads();
+extern void Sys_ShutdownThreads();
+
+const int MAX_CRITICAL_SECTIONS		= 5;
 
 enum {
 	CRITICAL_SECTION_ZERO = 0,
 	CRITICAL_SECTION_ONE,
 	CRITICAL_SECTION_TWO,
-	CRITICAL_SECTION_THREE
+	CRITICAL_SECTION_THREE,
+	CRITICAL_SECTION_SYS
 };
 
 void				Sys_EnterCriticalSection( int index = CRITICAL_SECTION_ZERO );
@@ -539,10 +399,8 @@ public:
 	virtual void			DebugPrintf( const char *fmt, ... )id_attribute((format(printf,2,3))) = 0;
 	virtual void			DebugVPrintf( const char *fmt, va_list arg ) = 0;
 
-	virtual double			GetClockTicks( void ) = 0;
-	virtual double			ClockTicksPerSecond( void ) = 0;
-	virtual cpuid_t			GetProcessorId( void ) = 0;
-	virtual const char *	GetProcessorString( void ) = 0;
+	virtual unsigned int	GetMilliseconds( void ) = 0;
+	virtual int				GetProcessorId( void ) = 0;
 	virtual const char *	FPU_GetState( void ) = 0;
 	virtual bool			FPU_StackIsEmpty( void ) = 0;
 	virtual void			FPU_SetFTZ( bool enable ) = 0;
@@ -553,14 +411,9 @@ public:
 	virtual bool			LockMemory( void *ptr, int bytes ) = 0;
 	virtual bool			UnlockMemory( void *ptr, int bytes ) = 0;
 
-	virtual void			GetCallStack( address_t *callStack, const int callStackSize ) = 0;
-	virtual const char *	GetCallStackStr( const address_t *callStack, const int callStackSize ) = 0;
-	virtual const char *	GetCallStackCurStr( int depth ) = 0;
-	virtual void			ShutdownSymbols( void ) = 0;
-
-	virtual int				DLL_Load( const char *dllName ) = 0;
-	virtual void *			DLL_GetProcAddress( int dllHandle, const char *procName ) = 0;
-	virtual void			DLL_Unload( int dllHandle ) = 0;
+	virtual uintptr_t		DLL_Load( const char *dllName ) = 0;
+	virtual void *			DLL_GetProcAddress( uintptr_t dllHandle, const char *procName ) = 0;
+	virtual void			DLL_Unload( uintptr_t dllHandle ) = 0;
 	virtual void			DLL_GetFileName( const char *baseName, char *dllName, int maxLength ) = 0;
 
 	virtual sysEvent_t		GenerateMouseButtonEvent( int button, bool down ) = 0;
@@ -571,8 +424,5 @@ public:
 };
 
 extern idSys *				sys;
-
-bool Sys_LoadOpenAL( void );
-void Sys_FreeOpenAL( void );
 
 #endif /* !__SYS_PUBLIC__ */
