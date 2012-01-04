@@ -602,11 +602,6 @@ void GLimp_Shutdown( void ) {
 		glw_state.window = nil;
 	}
 
-	if (glw_state.log_fp) {
-		fclose(glw_state.log_fp);
-		glw_state.log_fp = 0;
-	}
-
 	for (displayIndex = 0; displayIndex < glw_state.displayCount; displayIndex++) {
 		free(glw_state.originalDisplayGammaTables[displayIndex].red);
 		free(glw_state.originalDisplayGammaTables[displayIndex].blue);
@@ -630,13 +625,6 @@ void GLimp_Shutdown( void ) {
 
 	common->Printf("----- Done shutting down GL -----\n");
 }
-
-/*
-===============
-GLimp_LogComment
-===============
-*/
-void	GLimp_LogComment( char *comment ) { }
 
 /*
 ===============
@@ -1436,25 +1424,6 @@ bool Sys_Unhide() {
 	return true;
 }
 
-bool GLimp_SpawnRenderThread( void (*function)( void ) ) {
-	return false;
-}
-
-void *GLimp_RendererSleep(void) {
-	return NULL;
-}
-
-void GLimp_FrontEndSleep(void) { }
-
-void GLimp_WakeRenderer( void *data ) { }
-
-void *GLimp_BackEndSleep( void ) {
-	return NULL;
-}
-
-void GLimp_WakeBackEnd( void *data ) {
-}
-
 // enable / disable context is just for the r_skipRenderContext debug option
 void GLimp_DeactivateContext( void ) {
 	[NSOpenGLContext clearCurrentContext];
@@ -1463,8 +1432,6 @@ void GLimp_DeactivateContext( void ) {
 void GLimp_ActivateContext( void ) {
 	[OSX_GetNSGLContext() makeCurrentContext];
 }
-
-void GLimp_EnableLogging(bool stat) { }
 
 NSDictionary *Sys_GetMatchingDisplayMode( glimpParms_t parms ) {
 	NSArray *displayModes;

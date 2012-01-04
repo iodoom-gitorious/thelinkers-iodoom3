@@ -55,6 +55,25 @@ polygon offset factor causes occasional texture holes from highly angled texture
 
 */
 
+// WGL_ARB_pixel_format
+static PFNWGLCHOOSEPIXELFORMATARBPROC wglChoosePixelFormatARB;
+
+// WGL_ARB_pixel_format
+static PFNWGLGETPIXELFORMATATTRIBIVARBPROC wglGetPixelFormatAttribivARB;
+static PFNWGLGETPIXELFORMATATTRIBFVARBPROC wglGetPixelFormatAttribfvARB;
+
+// WGL_ARB_pbuffer
+static PFNWGLCREATEPBUFFERARBPROC	wglCreatePbufferARB;
+static PFNWGLGETPBUFFERDCARBPROC	wglGetPbufferDCARB;
+static PFNWGLRELEASEPBUFFERDCARBPROC	wglReleasePbufferDCARB;
+static PFNWGLDESTROYPBUFFERARBPROC	wglDestroyPbufferARB;
+static PFNWGLQUERYPBUFFERARBPROC	wglQueryPbufferARB;
+
+// WGL_ARB_render_texture
+static PFNWGLBINDTEXIMAGEARBPROC		wglBindTexImageARB;
+static PFNWGLRELEASETEXIMAGEARBPROC	wglReleaseTexImageARB;
+static PFNWGLSETPBUFFERATTRIBARBPROC	wglSetPbufferAttribARB;
+
 static	bool		initialized;
 
 static	int lightBufferSize = 1024;
@@ -326,7 +345,6 @@ GL_SelectTextureNoClient
 static void GL_SelectTextureNoClient( int unit ) {
 	backEnd.glState.currenttmu = unit;
 	qglActiveTextureARB( GL_TEXTURE0_ARB + unit );
-	RB_LogComment( "glActiveTextureARB( %i )\n", unit );
 }
 
 
@@ -507,6 +525,25 @@ void R_Exp_Allocate( void ) {
 	int	pbiAttributes[] = {0, 0};
 
 	initialized = true;
+
+	// WGL_ARB_pixel_format
+	wglChoosePixelFormatARB = (PFNWGLCHOOSEPIXELFORMATARBPROC)GLimp_ExtensionPointer("wglChoosePixelFormatARB");
+
+	// WGL_ARB_pixel_format
+	wglGetPixelFormatAttribivARB = (PFNWGLGETPIXELFORMATATTRIBIVARBPROC)GLimp_ExtensionPointer("wglGetPixelFormatAttribivARB");
+	wglGetPixelFormatAttribfvARB = (PFNWGLGETPIXELFORMATATTRIBFVARBPROC)GLimp_ExtensionPointer("wglGetPixelFormatAttribfvARB");
+
+	// WGL_ARB_pbuffer
+	wglCreatePbufferARB = (PFNWGLCREATEPBUFFERARBPROC)GLimp_ExtensionPointer("wglCreatePbufferARB");
+	wglGetPbufferDCARB = (PFNWGLGETPBUFFERDCARBPROC)GLimp_ExtensionPointer("wglGetPbufferDCARB");
+	wglReleasePbufferDCARB = (PFNWGLRELEASEPBUFFERDCARBPROC)GLimp_ExtensionPointer("wglReleasePbufferDCARB");
+	wglDestroyPbufferARB = (PFNWGLDESTROYPBUFFERARBPROC)GLimp_ExtensionPointer("wglDestroyPbufferARB");
+	wglQueryPbufferARB = (PFNWGLQUERYPBUFFERARBPROC)GLimp_ExtensionPointer("wglQueryPbufferARB");
+
+	// WGL_ARB_render_texture
+	wglBindTexImageARB = (PFNWGLBINDTEXIMAGEARBPROC)GLimp_ExtensionPointer("wglBindTexImageARB");
+	wglReleaseTexImageARB = (PFNWGLRELEASETEXIMAGEARBPROC)GLimp_ExtensionPointer("wglReleaseTexImageARB");
+	wglSetPbufferAttribARB = (PFNWGLSETPBUFFERATTRIBARBPROC)GLimp_ExtensionPointer("wglSetPbufferAttribARB");
 
 #if 1
 	//
@@ -1856,8 +1893,6 @@ void R_EXP_RenderViewDepthImage( void ) {
 			backEnd.viewDef->viewport.y1,  backEnd.viewDef->viewport.x2 -  backEnd.viewDef->viewport.x1 + 1,
 			backEnd.viewDef->viewport.y2 -  backEnd.viewDef->viewport.y1 + 1 );
 	} else {
-		RB_LogComment( "---------- R_EXP_RenderViewDepthImage ----------\n" );
-
 		if ( r_sb_usePbuffer.GetBool() ) {
 			GL_CheckErrors();
 			// set the current openGL drawable to the shadow buffer

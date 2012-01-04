@@ -97,8 +97,6 @@ idCVar com_showAsyncStats( "com_showAsyncStats", "0", CVAR_BOOL|CVAR_SYSTEM|CVAR
 idCVar com_showSoundDecoders( "com_showSoundDecoders", "0", CVAR_BOOL|CVAR_SYSTEM|CVAR_NOCHEAT, "show sound decoders" );
 idCVar com_timestampPrints( "com_timestampPrints", "0", CVAR_SYSTEM, "print time with each console print, 1 = msec, 2 = sec", 0, 2, idCmdSystem::ArgCompletion_Integer<0,2> );
 idCVar com_timescale( "timescale", "1", CVAR_SYSTEM | CVAR_FLOAT, "scales the time", 0.1f, 10.0f );
-idCVar com_logFile( "logFile", "0", CVAR_SYSTEM | CVAR_NOCHEAT, "1 = buffer log, 2 = flush after each print", 0, 2, idCmdSystem::ArgCompletion_Integer<0,2> );
-idCVar com_logFileName( "logFileName", "qconsole.log", CVAR_SYSTEM | CVAR_NOCHEAT, "name of log file, if empty, qconsole.log will be used" );
 idCVar com_makingBuild( "com_makingBuild", "0", CVAR_BOOL | CVAR_SYSTEM, "1 when making a build" );
 idCVar com_updateLoadSize( "com_updateLoadSize", "0", CVAR_BOOL | CVAR_SYSTEM | CVAR_NOCHEAT, "update the load size after loading a map" );
 idCVar com_videoRam( "com_videoRam", "64", CVAR_INTEGER | CVAR_SYSTEM | CVAR_NOCHEAT | CVAR_ARCHIVE, "holds the last amount of detected video ram" );
@@ -187,7 +185,6 @@ private:
 	void						ClearCommandLine( void );
 	bool						SafeMode( void );
 	void						CheckToolMode( void );
-	void						CloseLogFile( void );
 	void						WriteConfiguration( void );
 	void						DumpWarnings( void );
 	void						SingleAsyncTic( void );
@@ -199,9 +196,6 @@ private:
 	bool						com_fullyInitialized;
 	bool						com_refreshOnPrint;		// update the screen every print for dmap
 	int							com_errorEntered;		// 0, ERP_DROP, etc
-	bool						com_shuttingDown;
-
-	idFile *					logFile;
 
 	char						errorMessage[MAX_PRINT_MSG_SIZE];
 
@@ -236,9 +230,6 @@ idCommonLocal::idCommonLocal( void ) {
 	com_fullyInitialized = false;
 	com_refreshOnPrint = false;
 	com_errorEntered = 0;
-	com_shuttingDown = false;
-
-	logFile = NULL;
 
 	strcpy( errorMessage, "" );
 
@@ -319,19 +310,6 @@ bool FindEditor( void ) {
 
 /*
 ==================
-idCommonLocal::CloseLogFile
-==================
-*/
-void idCommonLocal::CloseLogFile( void ) {
-	if ( logFile ) {
-		com_logFile.SetBool( false ); // make sure no further VPrintf attempts to open the log file again
-		fileSystem->CloseFile( logFile );
-		logFile = NULL;
-	}
-}
-
-/*
-==================
 idCommonLocal::SetRefreshOnPrint
 ==================
 */
@@ -349,7 +327,6 @@ A raw string should NEVER be passed as fmt, because of "%f" type crashes.
 void idCommonLocal::VPrintf( const char *fmt, va_list args ) {
 	char		msg[MAX_PRINT_MSG_SIZE];
 	int			timeLength;
-	static bool	logFileFailed = false;
 
 	// if the cvar system is not initialized
 	if ( !cvarSystem->IsInitialized() ) {
@@ -403,42 +380,6 @@ void idCommonLocal::VPrintf( const char *fmt, va_list args ) {
 	}
 #endif
 #endif
-
-	// logFile
-	if ( com_logFile.GetInteger() && !logFileFailed && fileSystem->IsInitialized() ) {
-		static bool recursing;
-
-		if ( !logFile && !recursing ) {
-			struct tm *newtime;
-			ID_TIME_T aclock;
-			const char *fileName = com_logFileName.GetString()[0] ? com_logFileName.GetString() : "qconsole.log";
-
-			// fileSystem->OpenFileWrite can cause recursive prints into here
-			recursing = true;
-
-			logFile = fileSystem->OpenFileWrite( fileName );
-			if ( !logFile ) {
-				logFileFailed = true;
-				FatalError( "failed to open log file '%s'\n", fileName );
-			}
-
-			recursing = false;
-
-			if ( com_logFile.GetInteger() > 1 ) {
-				// force it to not buffer so we get valid
-				// data even if we are crashing
-				logFile->ForceFlush();
-			}
-
-			time( &aclock );
-			newtime = localtime( &aclock );
-			Printf( "log file '%s' opened on %s\n", fileName, asctime( newtime ) );
-		}
-		if ( logFile ) {
-			logFile->Write( msg, strlen( msg ) );
-			logFile->Flush();	// ForceFlush doesn't help a whole lot
-		}
-	}
 
 	// don't trigger any updates if we are in the process of doing a fatal error
 	if ( com_errorEntered != ERP_FATAL ) {
@@ -2608,10 +2549,6 @@ idCommonLocal::Async
 =================
 */
 void idCommonLocal::Async( void ) {
-	if ( com_shuttingDown ) {
-		return;
-	}
-
 	int	msec = Sys_Milliseconds();
 	if ( !lastTicMsec ) {
 		lastTicMsec = msec - USERCMD_MSEC;
@@ -2803,7 +2740,16 @@ idCommonLocal::Init
 =================
 */
 void idCommonLocal::Init( int argc, char **argv ) {
-	SDL_Init(SDL_INIT_TIMER);
+#ifdef ID_DEDICATED
+	// we want to use the SDL event queue for dedicated servers. That
+	// requires video to be initialized, so we just use the dummy
+	// driver for headless boxen
+	char dummy[] = "SDL_VIDEODRIVER=dummy\0";
+	SDL_putenv(dummy);
+#endif
+
+	if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO))
+		Sys_Error("Error while initializing SDL: %s", SDL_GetError());
 
 	Sys_InitThreads();
 
@@ -2905,7 +2851,7 @@ void idCommonLocal::Init( int argc, char **argv ) {
 	async_timer = SDL_AddTimer(USERCMD_MSEC, AsyncTimer, NULL);
 
 	if (!async_timer)
-		Sys_Error("Error while starting the async timer");
+		Sys_Error("Error while starting the async timer: %s", SDL_GetError());
 }
 
 
@@ -2915,8 +2861,6 @@ idCommonLocal::Shutdown
 =================
 */
 void idCommonLocal::Shutdown( void ) {
-	com_shuttingDown = true;
-
 	if (async_timer) {
 		SDL_RemoveTimer(async_timer);
 		async_timer = NULL;
@@ -2963,6 +2907,8 @@ void idCommonLocal::Shutdown( void ) {
 	idLib::ShutDown();
 
 	Sys_ShutdownThreads();
+
+	SDL_Quit();
 }
 
 /*
@@ -3142,8 +3088,6 @@ void idCommonLocal::ShutdownGame( bool reloading ) {
 #ifdef DEBUG
 	DumpWarnings();
 #endif
-	// only shut down the log file after all output is done
-	CloseLogFile();
 
 	// shut down the file system
 	fileSystem->Shutdown( reloading );
