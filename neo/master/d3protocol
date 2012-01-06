@@ -1,0 +1,39 @@
+iodoom3 master-server protocol
+
+Symbols:
+    "..."   C-String literals (NULL char inclusive)
+    <...>   Variables of the type specified
+    (...)*  repeats the contents zero or more times
+    S->M    Server to Master message
+    M->S    Master to Server message
+    C->S    Client to Server message
+    C->M    Client to Master message
+
+Types:
+    nBytes  data type of n bytes (int32_t = 4Bytes, int16_t = 2Bytes, etc.)
+    String  NULL terminated C-String
+
+header = \xFF\xFF
+
+//S->M Sends a heartbeat to the master to tell him that this server exists
+<header>"heartbeat"
+
+//M->S The master ack the heartbeat asking for more info
+//C->S The Client wants to know more about the server
+<header>"getInfo"<challenge 4Bytes>
+
+//S->C and S->M Server Info
+<header>"infoResponse"<challenge 4Bytes><protocol 4Bytes>(<key String><value String>)*\x00\x00(<playerId 1Byte><Ping 2Bytes><Rate 4Bytes><PlayerName String>)*<maxAsyncClients 1Byte><OSMask 4Bytes>
+
+//C->M Ask for server matching the criteria. (Filter is applied afterwards afaik)
+<header>"getServers"<protocol 4Bytes><game String><flags 1Byte>
+
+//M->C Response to the getServers message
+<header>"servers"(<ip 4Bytes><port 2Bytes>)*
+
+//C->M Asks for auth
+<header>"clAuth"<protocol 4Bytes><ip 4Bytes><port 2Bytes><guid? 1Byte><guid String><xpkey? 1Byte>[xpkey String]
+
+//M->C AUTHKEY_GUID (i won't do AUTHKEY_BADKEY)
+//Note: i saw guids of 16Bytes but in code all guids are of 12Bytes //TODO
+<header>"authKey"<valid=AUTHKEY_GUID=1 1Byte><guid String[12]>
