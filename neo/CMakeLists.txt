@@ -70,6 +70,19 @@ if (NOT CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE "RelWithDebInfo")
 endif()
 
+# precompiled libraries from the doom3-libs repo
+if (DOOM3LIBS)
+	if (CMAKE_CROSSCOMPILING)
+		set(CMAKE_FIND_ROOT_PATH ${DOOM3LIBS})
+	else()
+		set(ENV{CMAKE_PREFIX_PATH} ${DOOM3LIBS})
+	endif()
+
+	# these are too stupid, give them a hint
+	set(ENV{OPENALDIR} ${DOOM3LIBS})
+	set(ENV{SDLDIR} ${DOOM3LIBS})
+endif()
+
 # libs
 find_package(JPEG REQUIRED)
 include_directories(${JPEG_INCLUDE_DIR})
@@ -188,6 +201,10 @@ if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID STREQUAL "Clang")
 	endif()
 elseif (MSVC)
 	add_definitions(/W4)
+	add_definitions(/wd4100) # unreferenced formal parameter
+	add_definitions(/wd4127) # conditional expression is constant
+	add_definitions(/wd4244) # possible loss of data
+	add_definitions(/wd4245) # signed/unsigned mismatch
 	add_definitions(/wd4714) # 'function' marked as __forceinline not inlined
 	add_definitions(/wd4996) # 'function': was declared deprecated
 	set(CMAKE_C_FLAGS_DEBUG "-D_DEBUG /Od /Zi /MDd")
@@ -218,6 +235,7 @@ endif()
 message(STATUS "Building ${CMAKE_BUILD_TYPE} for ${os}.${cpu}")
 
 set(src_renderer
+	renderer/jpeg_memory_src.cpp
 	renderer/Cinematic.cpp
 	renderer/GuiModel.cpp
 	renderer/Image_files.cpp
@@ -654,6 +672,7 @@ elseif (WIN32)
 		sys/win32/win_net.cpp
 		sys/win32/win_shared.cpp
 		sys/win32/win_syscon.cpp
+		sys/win32/SDL_win32_main.c
 	)
 
 	set(src_sys_core
