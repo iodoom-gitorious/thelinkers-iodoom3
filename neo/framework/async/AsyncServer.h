@@ -48,11 +48,6 @@ const int AUTHORIZE_TIMEOUT				= 5000;
 
 // states for the server's authorization process
 typedef enum {
-	CDK_WAIT = 0,	// we are waiting for a confirm/deny from auth
-					// this is subject to timeout if we don't hear from auth
-					// or a permanent wait if auth said so
-	CDK_OK,
-	CDK_ONLYLAN,
 	CDK_PUREWAIT,
 	CDK_PUREOK,
 	CDK_MAXSTATES
@@ -86,9 +81,6 @@ typedef struct challenge_s {
 	int					pingTime;		// time the challenge response was sent to client
 	bool				connected;		// true if the client is connected
 	authState_t			authState;		// local state regarding the client
-	authReply_t			authReply;		// cd key check replies
-	authReplyMsg_t		authReplyMsg;	// default auth messages
-	idStr				authReplyPrint;	// custom msg
 	char				guid[12];		// guid
 	int					OS;
 } challenge_t;
@@ -206,8 +198,6 @@ private:
 	bool				serverReloadingEngine;		// flip-flop to not loop over when net_serverReloadEngine is on
 
 	bool				noRconOutput;				// for default rcon response when command is silent
-
-	int					lastAuthTime;				// global for auth server timeout
 
 	// track the max outgoing rate over the last few secs to watch for spikes
 	// dependent on net_serverSnapshotDelay. 50ms, for a 3 seconds backlog -> 60 samples

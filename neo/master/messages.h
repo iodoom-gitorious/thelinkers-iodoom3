@@ -30,6 +30,7 @@
 #ifndef _MESSAGES_H_
 #define _MESSAGES_H_
 
+#define GUID_LENGTH 12
 
 // ---------- Public functions ---------- //
 

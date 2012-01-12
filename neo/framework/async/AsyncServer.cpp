@@ -40,27 +40,6 @@ const int NOINPUT_IDLE_TIME				= 30000;
 
 const int HEARTBEAT_MSEC				= 5*60*1000;
 
-// must be kept in sync with authReplyMsg_t
-const char* authReplyMsg[] = {
-	//	"Waiting for authorization",
-	"#str_07204",
-	//	"Client unknown to auth",
-	"#str_07205",
-	//	"Access denied - CD Key in use",
-	"#str_07206",
-	//	"Auth custom message", // placeholder - we propagate a message from the master
-	"#str_07207",
-	//	"Authorize Server - Waiting for client"
-	"#str_07208"
-};
-
-const char* authReplyStr[] = {
-	"AUTH_NONE",
-	"AUTH_OK",
-	"AUTH_WAIT",
-	"AUTH_DENY"
-};
-
 /*
 ==================
 idAsyncServer::idAsyncServer
@@ -88,7 +67,6 @@ idAsyncServer::idAsyncServer( void ) {
 	nextHeartbeatTime = 0;
 	nextAsyncStatsTime = 0;
 	noRconOutput = true;
-	lastAuthTime = 0;
 
 	memset( stats_outrate, 0, sizeof( stats_outrate ) );
 	stats_current = 0;
@@ -135,12 +113,7 @@ idAsyncServer::ClosePort
 ==================
 */
 void idAsyncServer::ClosePort( void ) {
-	int i;
-
 	serverPort.Close();
-	for ( i = 0; i < MAX_CHALLENGES; i++ ) {
-		challenges[ i ].authReplyPrint.Clear();
-	}
 }
 
 /*
@@ -1392,92 +1365,6 @@ void idAsyncServer::ProcessReliableClientMessages( int clientNum ) {
 
 /*
 ==================
-idAsyncServer::ProcessAuthMessage
-==================
-*/
-void idAsyncServer::ProcessAuthMessage( const idBitMsg &msg ) {
-	netadr_t		client_from;
-	char			client_guid[ 12 ], string[ MAX_STRING_CHARS ];
-	int				i, clientId;
-	authReply_t		reply;
-	authReplyMsg_t	replyMsg = AUTH_REPLY_WAITING;
-	idStr			replyPrintMsg;
-
-	reply = (authReply_t)msg.ReadByte();
-	if ( reply <= 0 || reply >= AUTH_MAXSTATES ) {
-		common->DPrintf( "auth: invalid reply %d\n", reply );
-		return;
-	}
-	clientId = msg.ReadShort( );
-	msg.ReadNetadr( &client_from );
-	msg.ReadString( client_guid, sizeof( client_guid ) );
-	if ( reply != AUTH_OK ) {
-		replyMsg = (authReplyMsg_t)msg.ReadByte();
-		if ( replyMsg <= 0 || replyMsg >= AUTH_REPLY_MAXSTATES ) {
-			common->DPrintf( "auth: invalid reply msg %d\n", replyMsg );
-			return;
-		}
-		if ( replyMsg == AUTH_REPLY_PRINT ) {
-			msg.ReadString( string, MAX_STRING_CHARS );
-			replyPrintMsg = string;
-		}
-	}
-
-	lastAuthTime = serverTime;
-
-	// no message parsing below
-
-	for ( i = 0; i < MAX_CHALLENGES; i++ ) {
-		if ( !challenges[i].connected && challenges[ i ].clientId == clientId ) {
-			// return if something is wrong
-			// break if we have found a valid auth
-			if ( !strlen( challenges[ i ].guid ) ) {
-				common->DPrintf( "auth: client %s has no guid yet\n", Sys_NetAdrToString( challenges[ i ].address ) );
-				return;
-			}
-			if ( idStr::Cmp( challenges[ i ].guid, client_guid ) ) {
-				common->DPrintf( "auth: client %s %s not matched, auth server says guid %s\n", Sys_NetAdrToString( challenges[ i ].address ), challenges[i].guid, client_guid );
-				return;
-			}
-			if ( !Sys_CompareNetAdrBase( client_from, challenges[i].address ) ) {
-				// let auth work when server and master don't see the same IP
-				common->DPrintf( "auth: matched guid '%s' for != IPs %s and %s\n", client_guid, Sys_NetAdrToString( client_from ), Sys_NetAdrToString( challenges[i].address ) );
-			}
-			break;
-		}
-	}
-	if ( i >= MAX_CHALLENGES ) {
-		common->DPrintf( "auth: failed client lookup %s %s\n", Sys_NetAdrToString( client_from ), client_guid );
-		return;
-	}
-
-	if ( challenges[ i ].authState != CDK_WAIT ) {
-		common->DWarning( "auth: challenge 0x%x %s authState %d != CDK_WAIT", challenges[ i ].challenge, Sys_NetAdrToString( challenges[ i ].address ), challenges[ i ].authState );
-		return;
-	}
-
-	idStr::snPrintf( challenges[ i ].guid, 12, client_guid );
-	if ( reply == AUTH_OK ) {
-		challenges[ i ].authState = CDK_OK;
-		common->Printf( "client %s %s is authed\n", Sys_NetAdrToString( client_from ), client_guid );
-	} else {
-		const char *msg;
-		if ( replyMsg != AUTH_REPLY_PRINT ) {
-			msg = authReplyMsg[ replyMsg ];
-		} else {
-			msg = replyPrintMsg.c_str();
-		}
-		// maybe localize it
-		const char *l_msg = common->GetLanguageDict()->GetString( msg );
-		common->DPrintf( "auth: client %s %s - %s %s\n", Sys_NetAdrToString( client_from ), client_guid, authReplyStr[ reply ], l_msg );
-		challenges[ i ].authReply = reply;
-		challenges[ i ].authReplyMsg = replyMsg;
-		challenges[ i ].authReplyPrint = replyPrintMsg;
-	}
-}
-
-/*
-==================
 idAsyncServer::ProcessChallengeMessage
 ==================
 */
@@ -1508,12 +1395,12 @@ void idAsyncServer::ProcessChallengeMessage( const netadr_t from, const idBitMsg
 		challenges[i].address = from;
 		challenges[i].clientId = clientId;
 		challenges[i].challenge = ( (rand() << 16) ^ rand() ) ^ serverTime;
+		if ( sessLocal.mapSpawnData.serverInfo.GetInt( "si_pure" ) )
+			challenges[i].authState = CDK_PUREWAIT;
+		else
+			challenges[i].authState = CDK_PUREOK;
 		challenges[i].time = serverTime;
 		challenges[i].connected = false;
-		challenges[i].authState = CDK_WAIT;
-		challenges[i].authReply = AUTH_NONE;
-		challenges[i].authReplyMsg = AUTH_REPLY_WAITING;
-		challenges[i].authReplyPrint = "";
 		challenges[i].guid[0] = '\0';
 	}
 	challenges[i].pingTime = serverTime;
@@ -1529,27 +1416,6 @@ void idAsyncServer::ProcessChallengeMessage( const netadr_t from, const idBitMsg
 	outMsg.WriteString( cvarSystem->GetCVarString( "fs_game" ) );
 
 	serverPort.SendPacket( from, outMsg.GetData(), outMsg.GetSize() );
-
-	if ( Sys_IsLANAddress( from ) ) {
-		// no CD Key check for LAN clients
-		challenges[i].authState = CDK_OK;
-	} else {
-		if ( idAsyncNetwork::LANServer.GetBool() ) {
-			common->Printf( "net_LANServer is enabled. Client %s is not a LAN address, will be rejected\n", Sys_NetAdrToString( from ) );
-			challenges[ i ].authState = CDK_ONLYLAN;
-		} else {
-			// emit a cd key confirmation request
-			outMsg.BeginWriting();
-			outMsg.WriteShort( CONNECTIONLESS_MESSAGE_ID );
-			outMsg.WriteString( "srvAuth" );
-			outMsg.WriteLong( ASYNC_PROTOCOL_VERSION );
-			outMsg.WriteNetadr( from );
-			outMsg.WriteLong( -1 ); // this identifies "challenge" auth vs "connect" auth
-			// protocol 1.37 addition
-			outMsg.WriteByte( fileSystem->RunningD3XP() );
-			serverPort.SendPacket( idAsyncNetwork::GetMasterAddress(), outMsg.GetData(), outMsg.GetSize() );
-		}
-	}
 }
 
 /*
@@ -1694,7 +1560,7 @@ void idAsyncServer::ProcessConnectMessage( const netadr_t from, const idBitMsg &
 	clientRate = msg.ReadLong();
 
 	// check the client data - only for non pure servers
-	if ( !sessLocal.mapSpawnData.serverInfo.GetInt( "si_pure" ) && clientDataChecksum != serverDataChecksum ) {
+	if ( !sessLocal.mapSpawnData.serverInfo.GetInt( "si_pure" ) && (clientDataChecksum != serverDataChecksum) ) {
 		PrintOOB( from, SERVER_PRINT_MISC, "#str_04842" );
 		return;
 	}
@@ -1710,58 +1576,8 @@ void idAsyncServer::ProcessConnectMessage( const netadr_t from, const idBitMsg &
 		case CDK_PUREWAIT:
 			SendPureServerMessage( from, OS );
 			return;
-		case CDK_ONLYLAN:
-			common->DPrintf( "%s: not a lan client\n", Sys_NetAdrToString( from ) );
-			PrintOOB( from, SERVER_PRINT_MISC, "#str_04843" );
-			return;
-		case CDK_WAIT:
-			if ( challenges[ ichallenge ].authReply == AUTH_NONE && Min( serverTime - lastAuthTime, serverTime - challenges[ ichallenge ].time ) > AUTHORIZE_TIMEOUT ) {
-				common->DPrintf( "%s: Authorize server timed out\n", Sys_NetAdrToString( from ) );
-				break; // will continue with the connecting process
-			}
-			const char *msg, *l_msg;
-			if ( challenges[ ichallenge ].authReplyMsg != AUTH_REPLY_PRINT ) {
-				msg = authReplyMsg[ challenges[ ichallenge ].authReplyMsg ];
-			} else {
-				msg = challenges[ ichallenge ].authReplyPrint.c_str();
-			}
-			l_msg = common->GetLanguageDict()->GetString( msg );
-
-			common->DPrintf( "%s: %s\n", Sys_NetAdrToString( from ), l_msg );
-
-			if ( challenges[ ichallenge ].authReplyMsg == AUTH_REPLY_UNKNOWN || challenges[ ichallenge ].authReplyMsg == AUTH_REPLY_WAITING ) {
-				// the client may be trying to connect to us in LAN mode, and the server disagrees
-				// let the client know so it would switch to authed connection
-				idBitMsg outMsg;
-				byte msgBuf[ MAX_MESSAGE_SIZE ];
-				outMsg.Init( msgBuf, sizeof( msgBuf ) );
-				outMsg.WriteShort( CONNECTIONLESS_MESSAGE_ID );
-				outMsg.WriteString( "authrequired" );
-				serverPort.SendPacket( from, outMsg.GetData(), outMsg.GetSize() );
-			}
-
-			PrintOOB( from, SERVER_PRINT_MISC, msg );
-
-			// update the guid in the challenges
-			idStr::snPrintf( challenges[ ichallenge ].guid, sizeof( challenges[ ichallenge ].guid ), guid );
-
-			// once auth replied denied, stop sending further requests
-			if ( challenges[ ichallenge ].authReply != AUTH_DENY ) {
-				// emit a cd key confirmation request
-				outMsg.Init( msgBuf, sizeof( msgBuf ) );
-				outMsg.WriteShort( CONNECTIONLESS_MESSAGE_ID );
-				outMsg.WriteString( "srvAuth" );
-				outMsg.WriteLong( ASYNC_PROTOCOL_VERSION );
-				outMsg.WriteNetadr( from );
-				outMsg.WriteLong( clientId );
-				outMsg.WriteString( guid );
-				// protocol 1.37 addition
-				outMsg.WriteByte( fileSystem->RunningD3XP() );
-				serverPort.SendPacket( idAsyncNetwork::GetMasterAddress(), outMsg.GetData(), outMsg.GetSize() );
-			}
-			return;
 		default:
-			assert( challenges[ ichallenge ].authState == CDK_OK || challenges[ ichallenge ].authState == CDK_PUREOK );
+			assert( challenges[ ichallenge ].authState == CDK_PUREOK );
 	}
 
 	numClients = 0;
@@ -2172,19 +1988,6 @@ bool idAsyncServer::ConnectionlessMessage( const netadr_t from, const idBitMsg &
 	// download request
 	if ( idStr::Icmp( string, "downloadRequest" ) == 0 ) {
 		ProcessDownloadRequestMessage( from, msg );
-	}
-
-	// auth server
-	if ( idStr::Icmp( string, "auth" ) == 0 ) {
-		if ( !Sys_CompareNetAdrBase( from, idAsyncNetwork::GetMasterAddress() ) ) {
-			common->Printf( "auth: bad source %s\n", Sys_NetAdrToString( from ) );
-			return false;
-		}
-		if ( idAsyncNetwork::LANServer.GetBool() ) {
-			common->Printf( "auth message from master. net_LANServer is enabled, ignored.\n" );
-		}
-		ProcessAuthMessage( msg );
-		return false;
 	}
 
 	return false;
