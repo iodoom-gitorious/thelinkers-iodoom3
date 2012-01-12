@@ -55,31 +55,8 @@ If you have questions concerning this license or the applicable additional terms
 idCVar Win32Vars_t::win_outputDebugString( "win_outputDebugString", "0", CVAR_SYSTEM | CVAR_BOOL, "" );
 idCVar Win32Vars_t::win_outputEditString( "win_outputEditString", "1", CVAR_SYSTEM | CVAR_BOOL, "" );
 idCVar Win32Vars_t::win_viewlog( "win_viewlog", "0", CVAR_SYSTEM | CVAR_INTEGER, "" );
-idCVar Win32Vars_t::win_allowMultipleInstances( "win_allowMultipleInstances", "0", CVAR_SYSTEM | CVAR_BOOL, "allow multiple instances running concurrently" );
 
 Win32Vars_t	win32;
-
-static sysMemoryStats_t exeLaunchMemoryStats;
-
-/*
-================
-Sys_GetExeLaunchMemoryStatus
-================
-*/
-void Sys_GetExeLaunchMemoryStatus( sysMemoryStats_t &stats ) {
-	stats = exeLaunchMemoryStats;
-}
-
-/*
-==================
-Sys_FlushCacheMemory
-
-On windows, the vertex buffers are write combined, so they
-don't need to be flushed from the cache
-==================
-*/
-void Sys_FlushCacheMemory( void *base, int bytes ) {
-}
 
 /*
 =============
@@ -249,15 +226,6 @@ const char *Sys_Cwd( void ) {
 	cwd[MAX_OSPATH-1] = 0;
 
 	return cwd;
-}
-
-/*
-==============
-Sys_DefaultCDPath
-==============
-*/
-const char *Sys_DefaultCDPath( void ) {
-	return "";
 }
 
 /*
@@ -462,25 +430,6 @@ void Sys_DLL_Unload( uintptr_t dllHandle ) {
 
 /*
 ================
-Sys_AlreadyRunning
-
-returns true if there is a copy of D3 running already
-================
-*/
-bool Sys_AlreadyRunning( void ) {
-#ifndef DEBUG
-	if ( !win32.win_allowMultipleInstances.GetBool() ) {
-		HANDLE hMutexOneInstance = ::CreateMutex( NULL, FALSE, "DOOM3" );
-		if ( ::GetLastError() == ERROR_ALREADY_EXISTS || ::GetLastError() == ERROR_ACCESS_DENIED ) {
-			return true;
-		}
-	}
-#endif
-	return false;
-}
-
-/*
-================
 Sys_Init
 
 The cvar system must already be setup
@@ -571,8 +520,6 @@ int main(int argc, char *argv[]) {
 	const HCURSOR hcurSave = ::SetCursor( LoadCursor( 0, IDC_WAIT ) );
 
 	Sys_SetPhysicalWorkMemory( 192 << 20, 1024 << 20 );
-
-	Sys_GetCurrentMemoryStatus( exeLaunchMemoryStats );
 
 	win32.hInstance = GetModuleHandle(NULL);
 

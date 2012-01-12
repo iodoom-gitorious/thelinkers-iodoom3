@@ -241,23 +241,6 @@ const char *Posix_Cwd( void ) {
 
 /*
 =================
-Sys_GetMemoryStatus
-=================
-*/
-void Sys_GetMemoryStatus( sysMemoryStats_t &stats ) {
-	common->Printf( "FIXME: Sys_GetMemoryStatus stub\n" );
-}
-
-void Sys_GetCurrentMemoryStatus( sysMemoryStats_t &stats ) {
-	common->Printf( "FIXME: Sys_GetCurrentMemoryStatus\n" );
-}
-
-void Sys_GetExeLaunchMemoryStatus( sysMemoryStats_t &stats ) {
-	common->Printf( "FIXME: Sys_GetExeLaunchMemoryStatus\n" );
-}
-
-/*
-=================
 Sys_Init
 Posix_EarlyInit/Posix_LateInit is better
 =================
@@ -321,11 +304,6 @@ void Sys_ShowConsole( int visLevel, bool quitOnClose ) { }
 
 // ---------------------------------------------------------------------------
 
-// only relevant when specified on command line
-const char *Sys_DefaultCDPath( void ) {
-	return "";
-}
-
 ID_TIME_T Sys_FileTimeStamp(FILE * fp) {
 	struct stat st;
 	fstat(fileno(fp), &st);
@@ -339,13 +317,6 @@ char *Sys_GetClipboardData(void) {
 
 void Sys_SetClipboardData( const char *string ) {
 	Sys_Printf( "TODO: Sys_SetClipboardData\n" );
-}
-
-
-// stub pretty much everywhere - heavy calling
-void Sys_FlushCacheMemory(void *base, int bytes)
-{
-//  Sys_Printf("Sys_FlushCacheMemory stub\n");
 }
 
 bool Sys_FPU_StackIsEmpty( void ) {
@@ -395,16 +366,6 @@ return in MegaBytes
 int Sys_GetDriveFreeSpace( const char *path ) {
 	common->DPrintf( "TODO: Sys_GetDriveFreeSpace\n" );
 	return 1000 * 1024;
-}
-
-/*
-================
-Sys_AlreadyRunning
-return true if there is a copy of D3 running already
-================
-*/
-bool Sys_AlreadyRunning( void ) {
-	return false;
 }
 
 /*

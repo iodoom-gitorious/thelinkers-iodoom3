@@ -54,9 +54,6 @@ void	Sys_CreateThread( xthread_t function, void *parms, xthreadInfo& info, const
 void Sys_DestroyThread( xthreadInfo& info ) {
 }
 
-void	Sys_FlushCacheMemory( void *base, int bytes ) {
-}
-
 void Sys_Error( const char *error, ... ) {
 	va_list		argptr;
 	char		text[4096];
@@ -120,10 +117,6 @@ sysEvent_t	Sys_GetEvent( void ) {
 }
 
 void	Sys_Mkdir( const char *path ) {
-}
-
-const char *Sys_DefaultCDPath(void) {
-	return "";
 }
 
 const char *Sys_DefaultBasePath(void) {
