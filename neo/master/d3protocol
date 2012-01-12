@@ -31,9 +31,3 @@ header = \xFF\xFF
 //M->C Response to the getServers message
 <header>"servers"(<ip 4Bytes><port 2Bytes>)*
 
-//C->M Asks for auth
-<header>"clAuth"<protocol 4Bytes><ip 4Bytes><port 2Bytes><guid? 1Byte><guid String><xpkey? 1Byte>[xpkey String]
-
-//M->C AUTHKEY_GUID (i won't do AUTHKEY_BADKEY) (23Bytes)
-//Note: i saw guids of 16Bytes but in code all guids are of 12Bytes //TODO
-<header>"authKey"<valid=AUTHKEY_GUID=1 1Byte><guid String[12]>

@@ -61,16 +61,6 @@
 // "servers\0(<ip><port>)*"
 #define M2C_GETSERVERSREPONSE "servers"
 
-// "clAuth"
-#define C2M_CLAUTH "clAuth"
-
-// "clAuth"
-#define C2M_GAMEAUTH "gameAuth"
-
-// "authKey"
-#define M2C_AUTHKEY "authKey"
-#define M2C_AUTHKEY_LEN_OK 23
-
 // ---------- Private functions ---------- //
 
 /*
@@ -320,115 +310,6 @@ static void HandleGetServers (const char* msg, const struct sockaddr_in* addr)
 
 /*
 ====================
-RandomGUID <---- Make it on the master???
-
-Build a guid for an "authKey" message
-====================
-*/
-static void BuildGUID (char *guid)
-{
-	size_t ind;
-
-	for (ind = 0; ind < GUID_LENGTH; ind++)
-	{
-		char c;
-		do
-		{
-			c = 33 + rand () % (126 - 33 + 1);  // -> c = 33..126
-		} while (c == '\\' || c == ';' || c == '"' || c == '%' || c == '/');
-
-		guid[ind] = c;
-	}
-
-	guid[11] = '\0';
-}
-
-/*
-====================
-PrintPacket
-
-Print the contents of a packet on stdout
-====================
-*/
-static void PrintPacket (const char* packet, size_t length)
-{
-	size_t i;
-
-	// Exceptionally, we use MSG_NOPRINT here because if the function is
-	// called, the user probably wants this text to be displayed
-	// whatever the maximum message level is.
-	MsgPrint (MSG_NOPRINT, "\"");
-
-	for (i = 0; i < length; i++)
-	{
-		char c = packet[i];
-		if (c == '\\')
-			MsgPrint (MSG_NOPRINT, "\\\\");
-		else if (c == '\"')
-			MsgPrint (MSG_NOPRINT, "\"");
-		else if (c >= 32 && (qbyte)c <= 127)
-		 	MsgPrint (MSG_NOPRINT, "%c", c);
-		else
-			MsgPrint (MSG_NOPRINT, "\\x%02X", (unsigned char)c);
-	}
-
-	MsgPrint (MSG_NOPRINT, "\" (%u bytes)\n", length);
-}
-
-/*
-====================
-HandleclAuth
-
-Parse clAuth requests and send the appropriate response (Always auth)
-====================
-*/
-static void HandleclAuth (const char* msg, const struct sockaddr_in* addr)
-{
-	char packet [MAX_PACKET_SIZE] = "\xFF\xFF" M2C_AUTHKEY;
-	char guid[GUID_LENGTH];
-
-	packet[strlen (packet) + 1] = 1;
-	BuildGUID(guid);
-	memcpy(packet + strlen (packet) + 2, guid, GUID_LENGTH);
-
-	PrintPacket (packet, M2C_AUTHKEY_LEN_OK);
-	sendto (outSock, packet, M2C_AUTHKEY_LEN_OK, 0,
-			(const struct sockaddr*)addr,
-					sizeof (*addr));
-
-	MsgPrint (MSG_DEBUG, "%s <--- authKey with guid \"%s\"\n",
-			  peer_address, guid);
-}
-
-/*
-====================
-HandlegameAuth
-
-Parse clAuth requests and send the appropriate response (Always auth)
-====================
-*/
-static void HandlegameAuth (const char* msg, const struct sockaddr_in* addr)
-{
-	char packet [MAX_PACKET_SIZE] = "\xFF\xFF" M2C_AUTHKEY;
-	char guid[GUID_LENGTH];
-
-	packet[strlen (packet) + 1] = 1;
-	BuildGUID(guid);
-	memcpy(packet + strlen (packet) + 2, guid, GUID_LENGTH);
-
-	PrintPacket (packet, M2C_AUTHKEY_LEN_OK);
-	sendto (outSock, packet, M2C_AUTHKEY_LEN_OK, 0,
-			(const struct sockaddr*)addr,
-					sizeof (*addr));
-
-	MsgPrint (MSG_DEBUG, "%s <--- authKey with guid \"%s\"\n",
-			  peer_address, guid);
-}
-
-
-
-/*
-====================
 HandleInfoResponse
 
 Parse infoResponse messages
@@ -545,17 +426,5 @@ void HandleMessage (const char* msg, size_t length,
 	else if (!strncmp (C2M_GETSERVERS, msg, strlen (C2M_GETSERVERS)))
 	{
 		HandleGetServers (msg + strlen (C2M_GETSERVERS) + 1, address);
-	}
-
-	// If it's a client auth request
-	else if (!strncmp (C2M_CLAUTH, msg, strlen (C2M_CLAUTH)))
-	{
-		HandleclAuth (msg + strlen (C2M_CLAUTH) + 1, address);
-	}
-
-	// If it's a game auth request
-	else if (!strncmp (C2M_GAMEAUTH, msg, strlen (C2M_GAMEAUTH)))
-	{
-		HandlegameAuth (msg + strlen (C2M_GAMEAUTH) + 1, address);
 	}
 }
