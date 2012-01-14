@@ -1,6 +1,8 @@
 project(doom3)
 cmake_minimum_required(VERSION 2.6)
 
+message(FATAL_ERROR "The project moved to https://github.com/dhewm/dhewm3")
+
 # TODO
 
 # osx: -weak_framework ?
