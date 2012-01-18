@@ -1,5 +1,7 @@
-project(doom3)
+project(dhewm3)
 cmake_minimum_required(VERSION 2.6)
+
+message(FATAL_ERROR "The project moved to https://github.com/dhewm/dhewm3")
 
 # TODO
 
@@ -31,7 +33,6 @@ option(GAME			"Build the base game code" ON)
 option(D3XP			"Build the d3xp game code" OFF)
 option(DEDICATED	"Build the dedicated server" OFF)
 option(X86			"Cross compile for x86 (only applicable on x86_64)" OFF)
-option(CURL			"Enable usage of libcurl for http/ftp downloads" OFF)
 option(ONATIVE		"Optimize for the host CPU" OFF)
 
 if (NOT CMAKE_SYSTEM_PROCESSOR)
@@ -69,17 +70,17 @@ if (NOT CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE "RelWithDebInfo")
 endif()
 
-# precompiled libraries from the doom3-libs repo
-if (DOOM3LIBS)
+# precompiled libraries from the dhewm3-libs repo
+if (DHEWM3LIBS)
 	if (CMAKE_CROSSCOMPILING)
-		set(CMAKE_FIND_ROOT_PATH ${DOOM3LIBS})
+		set(CMAKE_FIND_ROOT_PATH ${DHEWM3LIBS})
 	else()
-		set(ENV{CMAKE_PREFIX_PATH} ${DOOM3LIBS})
+		set(ENV{CMAKE_PREFIX_PATH} ${DHEWM3LIBS})
 	endif()
 
 	# these are too stupid, give them a hint
-	set(ENV{OPENALDIR} ${DOOM3LIBS})
-	set(ENV{SDLDIR} ${DOOM3LIBS})
+	set(ENV{OPENALDIR} ${DHEWM3LIBS})
+	set(ENV{SDLDIR} ${DHEWM3LIBS})
 endif()
 
 # libs
@@ -88,10 +89,7 @@ include_directories(${JPEG_INCLUDE_DIR})
 
 set(CMAKE_REQUIRED_INCLUDES ${JPEG_INCLUDE_DIR})
 set(CMAKE_REQUIRED_LIBRARIES ${JPEG_LIBRARY})
-CHECK_FUNCTION_EXISTS("jpeg_mem_src" jpeg_has_mem_src)
-if (jpeg_has_mem_src)
-	add_definitions(-DHAVE_JPEG_MEM_SRC)
-endif ()
+CHECK_FUNCTION_EXISTS("jpeg_mem_src" HAVE_JPEG_MEM_SRC)
 
 find_package(OGG REQUIRED)
 include_directories(${OGG_INCLUDE_DIR})
@@ -111,12 +109,13 @@ include_directories(${OPENGL_INCLUDE_DIR})
 find_package(SDL REQUIRED)
 include_directories(${SDL_INCLUDE_DIR})
 
-if (CURL)
-	find_package(CURL REQUIRED)
-	add_definitions(-DID_ENABLE_CURL=1)
+find_package(CURL QUIET)
+if (CURL_FOUND)
+	set(ID_ENABLE_CURL ON)
 	include_directories(${CURL_INCLUDE_DIR})
 else()
-	add_definitions(-DID_ENABLE_CURL=0)
+	message(STATUS "libcurl not found, server downloads won't be available")
+	set(ID_ENABLE_CURL OFF)
 endif()
 
 # compiler specific flags
@@ -231,7 +230,12 @@ if (WIN32)
 	)
 endif()
 
-message(STATUS "Building ${CMAKE_BUILD_TYPE} for ${os}.${cpu}")
+configure_file(
+    "${CMAKE_SOURCE_DIR}/config.h.in"
+    "${CMAKE_BINARY_DIR}/config.h"
+)
+
+message(STATUS "Building ${CMAKE_BUILD_TYPE} for ${os}-${cpu}")
 
 set(src_renderer
 	renderer/jpeg_memory_src.cpp
@@ -634,8 +638,8 @@ set(src_sys_dedicated	sys/linux/dedicated.cpp)
 
 if (APPLE)
 	set(OSX_RESOURCE_FILES
-			"${CMAKE_CURRENT_SOURCE_DIR}/sys/osx/Doom3.icns"
-			"${CMAKE_CURRENT_SOURCE_DIR}/sys/osx/Doom 3.rsrc"
+			"${CMAKE_SOURCE_DIR}/sys/osx/Doom3.icns"
+			"${CMAKE_SOURCE_DIR}/sys/osx/Doom 3.rsrc"
 	)
 
 	set_source_files_properties(${OSX_RESOURCE_FILES} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
@@ -695,7 +699,8 @@ else()
 	)
 endif()
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${CMAKE_BINARY_DIR})
+include_directories(${CMAKE_SOURCE_DIR})
 
 add_library(idlib STATIC ${src_idlib})
 if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID STREQUAL "Clang" AND NOT MINGW)
@@ -703,17 +708,17 @@ if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID STREQUAL "Clang" AND NOT MING
 endif()
 
 if (CORE)
-	add_executable(doom3 WIN32 MACOSX_BUNDLE
+	add_executable(dhewm3 WIN32 MACOSX_BUNDLE
 		${src_core}
 		${src_sys_base}
 		${src_sys_core}
 	)
 
-	set_target_properties(doom3 PROPERTIES COMPILE_DEFINITIONS "__DOOM_DLL__")
-	set_target_properties(doom3 PROPERTIES LINK_FLAGS "${ldflags}")
-	set_target_properties(doom3 PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${PROJECT_SOURCE_DIR}/sys/osx/Info.plist)
+	set_target_properties(dhewm3 PROPERTIES COMPILE_DEFINITIONS "__DOOM_DLL__")
+	set_target_properties(dhewm3 PROPERTIES LINK_FLAGS "${ldflags}")
+	set_target_properties(dhewm3 PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${PROJECT_SOURCE_DIR}/sys/osx/Info.plist)
 
-	target_link_libraries(doom3
+	target_link_libraries(dhewm3
 		idlib
 		${OPENGL_gl_LIBRARY}
 		${OPENAL_LIBRARY}
@@ -728,7 +733,7 @@ if (CORE)
 endif()
 
 if (DEDICATED)
-	add_executable(doom3ded WIN32 MACOSX_BUNDLE
+	add_executable(dhewm3ded WIN32 MACOSX_BUNDLE
 		${src_core}
 		${src_stub_openal}
 		${src_stub_gl}
@@ -737,9 +742,9 @@ if (DEDICATED)
 		${src_sys_dedicated}
 	)
 
-	set_target_properties(doom3ded PROPERTIES COMPILE_DEFINITIONS "ID_DEDICATED;__DOOM_DLL__")
-	set_target_properties(doom3ded PROPERTIES LINK_FLAGS "${ldflags}")
-	target_link_libraries(doom3ded
+	set_target_properties(dhewm3ded PROPERTIES COMPILE_DEFINITIONS "ID_DEDICATED;__DOOM_DLL__")
+	set_target_properties(dhewm3ded PROPERTIES LINK_FLAGS "${ldflags}")
+	target_link_libraries(dhewm3ded
 		idlib
 		${VORBISFILE_LIBRARIES}
 		${VORBIS_LIBRARIES}
@@ -754,7 +759,7 @@ if (GAME)
 	add_library(game${gamesuffix} SHARED ${src_game})
 	set_target_properties(game${gamesuffix} PROPERTIES PREFIX "")
 	set_target_properties(game${gamesuffix} PROPERTIES COMPILE_DEFINITIONS "GAME_DLL")
-	set_target_properties(game${gamesuffix} PROPERTIES COMPILE_FLAGS "-I${CMAKE_CURRENT_SOURCE_DIR}/game")
+	set_target_properties(game${gamesuffix} PROPERTIES COMPILE_FLAGS "-I${CMAKE_SOURCE_DIR}/game")
 	set_target_properties(game${gamesuffix} PROPERTIES LINK_FLAGS "${ldflags}")
 	set_target_properties(game${gamesuffix} PROPERTIES INSTALL_NAME_DIR "@executable_path")
 	target_link_libraries(game${gamesuffix} idlib)
@@ -764,7 +769,7 @@ if (D3XP)
 	add_library(d3xp${gamesuffix} SHARED ${src_d3xp})
 	set_target_properties(d3xp${gamesuffix} PROPERTIES PREFIX "")
 	set_target_properties(d3xp${gamesuffix} PROPERTIES COMPILE_DEFINITIONS "GAME_DLL;_D3XP;CTF")
-	set_target_properties(d3xp${gamesuffix} PROPERTIES COMPILE_FLAGS "-I${CMAKE_CURRENT_SOURCE_DIR}/d3xp")
+	set_target_properties(d3xp${gamesuffix} PROPERTIES COMPILE_FLAGS "-I${CMAKE_SOURCE_DIR}/d3xp")
 	set_target_properties(d3xp${gamesuffix} PROPERTIES LINK_FLAGS "${ldflags}")
 	set_target_properties(d3xp${gamesuffix} PROPERTIES INSTALL_NAME_DIR "@executable_path")
 	target_link_libraries(d3xp${gamesuffix} idlib)
