@@ -60,10 +60,6 @@ If you have questions concerning this license or the applicable additional terms
 	#define ID_ALLOW_CHEATS 0
 #endif
 
-#ifndef ID_ENABLE_CURL
-	#define ID_ENABLE_CURL 1
-#endif
-
 // fake a pure client. useful to connect an all-debug client to a server
 #ifndef ID_FAKE_PURE
 	#define ID_FAKE_PURE 0
@@ -93,14 +89,6 @@ If you have questions concerning this license or the applicable additional terms
 #		define ID_ENFORCE_KEY 1
 #	else
 #		define ID_ENFORCE_KEY 0
-#	endif
-#endif
-
-#ifndef ID_OPENAL
-#	if !defined( ID_DEDICATED )
-#		define ID_OPENAL 1
-#	else
-#		define ID_OPENAL 0
 #	endif
 #endif
 

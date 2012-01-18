@@ -29,6 +29,7 @@ If you have questions concerning this license or the applicable additional terms
 #ifndef __PLATFORM__
 #define __PLATFORM__
 
+#include "config.h"
 #include "framework/BuildDefines.h"
 
 /*
@@ -42,10 +43,7 @@ If you have questions concerning this license or the applicable additional terms
 // Win32
 #if defined(WIN32) || defined(_WIN32)
 
-#define	BUILD_STRING				"win-x86"
 #define BUILD_OS_ID					0
-#define	CPUSTRING					"x86"
-#define CPU_EASYARGS				1
 
 #define _alloca16( x )				((void *)((((uintptr_t)_alloca( (x)+15 )) + 15) & ~15))
 
@@ -82,15 +80,7 @@ If you have questions concerning this license or the applicable additional terms
 // Mac OSX
 #if defined(MACOS_X) || defined(__APPLE__)
 
-#define BUILD_STRING				"MacOSX-universal"
 #define BUILD_OS_ID					1
-#ifdef __ppc__
-	#define	CPUSTRING				"ppc"
-	#define CPU_EASYARGS			0
-#elif defined(__i386__)
-	#define	CPUSTRING				"x86"
-	#define CPU_EASYARGS			1
-#endif
 
 #ifdef GAME_DLL
 #define ID_GAME_API					__attribute__((visibility ("default")))
@@ -123,35 +113,6 @@ If you have questions concerning this license or the applicable additional terms
 #ifdef __unix__
 
 #define BUILD_OS_ID					2
-
-#ifdef __linux__
-	#define BUILD_OS "linux"
-#elif defined(__FreeBSD__)
-	#define BUILD_OS "FreeBSD"
-#elif defined(__DragonFly__)
-	#define BUILD_OS "DragonFly"
-#elif defined(__OpenBSD__)
-	#define BUILD_OS "OpenBSD"
-#elif defined(__NetBSD__)
-	#define BUILD_OS "NetBSD"
-#else
-	#error unknown operating system!
-#endif
-
-#ifdef __i386__
-	#define CPUSTRING				"x86"
-	#define CPU_EASYARGS			1
-#elif defined(__x86_64__)
-	#define CPUSTRING				"x86_64"
-	#define CPU_EASYARGS			0
-#elif defined(__ppc__)
-	#define CPUSTRING				"ppc"
-	#define CPU_EASYARGS			0
-#else
-	#error unknown cpu architecture!
-#endif
-
-#define	BUILD_STRING				(BUILD_OS "-" CPUSTRING)
 
 #define _alloca						alloca
 #define _alloca16( x )				((void *)((((uintptr_t)alloca( (x)+15 )) + 15) & ~15))
